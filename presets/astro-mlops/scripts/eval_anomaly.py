@@ -20,7 +20,7 @@ Que hace distinto
 
 Uso
 ---
-    python core/scripts/eval_anomaly.py \\
+    python presets/astro-mlops/scripts/eval_anomaly.py \\
         --scores 06_resultados/experimentos/scores.parquet \\
         --labels 05_datos/benchmark_sintetico/injections.yml \\
         --calib  06_resultados/experimentos/scores_nominal.parquet \\
@@ -74,11 +74,9 @@ def confirmar_k_de_n(excede: np.ndarray, k: int, n: int) -> np.ndarray:
         return excede.copy()
     x = excede.astype(np.int32)
     acum = np.cumsum(np.concatenate([[0], x]))
-    salida = np.zeros_like(x, dtype=bool)
-    for i in range(x.size):
-        ini = max(0, i - n + 1)
-        salida[i] = (acum[i + 1] - acum[ini]) >= k
-    return salida
+    idx = np.arange(x.size)
+    ini = np.maximum(0, idx - n + 1)
+    return (acum[idx + 1] - acum[ini]) >= k
 
 
 def average_precision(y: np.ndarray, s: np.ndarray) -> float:
@@ -236,12 +234,33 @@ def evaluar(
     # ── Por evento ───────────────────────────────────────────────────────────
     detectados, retrasos, anticipaciones = 0, [], []
     por_evento_detalle = []
+    no_evaluables: List[str] = []
     for ev in eventos:
         seg = alarma[ev["inicio"] : ev["fin"]]
+
+        # Un evento sin NINGUNA muestra evaluable (tipico del modo `dropout`, que
+        # llena la ventana de NaN) no es un fallo del detector: es una ventana que
+        # el detector nunca tuvo derecho a juzgar. Contarlo como "no detectado"
+        # deprime el recall por una razon que no tiene que ver con el modelo.
+        if not evaluable[ev["inicio"] : ev["fin"]].any():
+            no_evaluables.append(str(ev["id"]))
+            por_evento_detalle.append(
+                {
+                    "id": ev["id"],
+                    "tipo": ev["tipo"],
+                    "severidad_sigma": ev["severidad_sigma"],
+                    "detectado": None,
+                    "retraso_min": None,
+                    "motivo": "sin muestras evaluables en la ventana",
+                }
+            )
+            continue
+
         hit = bool(seg.any())
         detectados += int(hit)
         primer = int(np.nonzero(seg)[0][0]) + ev["inicio"] if hit else None
-        ref = ev.get("inicio_efectivo") or ev["inicio"]
+        efectivo = ev.get("inicio_efectivo")
+        ref = efectivo if efectivo is not None else ev["inicio"]
         if hit:
             retrasos.append((primer - ref) * cadencia_s / 60.0)
             anticipaciones.append((ev["fin"] - primer) * cadencia_s / 60.0)
@@ -260,7 +279,8 @@ def evaluar(
     verdaderas = sum(1 for a, b in alarmas if any(not (b <= i or a >= j) for i, j in intervalos))
     falsas = len(alarmas) - verdaderas
 
-    recall_ev = detectados / len(eventos) if eventos else float("nan")
+    evaluados = [e for e in por_evento_detalle if e["detectado"] is not None]
+    recall_ev = detectados / len(evaluados) if evaluados else float("nan")
     precision_ev = verdaderas / len(alarmas) if alarmas else 0.0
     f1_ev = (
         2 * precision_ev * recall_ev / (precision_ev + recall_ev)
@@ -288,7 +308,7 @@ def evaluar(
     # ── Desglose por tipo y severidad: la tabla que se publica ───────────────
     desglose: Dict[str, Dict[str, Any]] = {}
     for ev, det in zip(eventos, por_evento_detalle):
-        if ev["tipo"] is None:
+        if ev["tipo"] is None or det["detectado"] is None:
             continue
         clave = f"{ev['tipo']}@{ev['severidad_sigma']}"
         d = desglose.setdefault(clave, {"tipo": ev["tipo"], "severidad_sigma": ev["severidad_sigma"], "n": 0, "detectados": 0})
@@ -309,8 +329,11 @@ def evaluar(
         "por_punto": por_punto,
         "por_evento": {
             "n_eventos": len(eventos),
+            "n_eventos_evaluables": len(evaluados),
+            "n_eventos_sin_muestras_evaluables": len(no_evaluables),
+            "eventos_sin_muestras_evaluables": no_evaluables,
             "detectados": detectados,
-            "recall": round(recall_ev, 4) if eventos else None,
+            "recall": round(recall_ev, 4) if evaluados else None,
             "precision": round(precision_ev, 4),
             "f1": round(f1_ev, 4),
             "n_alarmas": len(alarmas),
@@ -384,7 +407,9 @@ def imprimir(rep: Dict[str, Any]) -> None:
     print(f"  Cobertura evaluable   : {cob['fraccion_evaluable'] * 100:.1f} %  ({cob['horas_evaluables']:.1f} h)")
     print("-" * 74)
     print("  POR EVENTO   (lo que le importa a quien opera)")
-    print(f"    eventos             : {ev['n_eventos']}   detectados: {ev['detectados']}")
+    print(f"    eventos             : {ev['n_eventos']}   evaluables: {ev['n_eventos_evaluables']}   detectados: {ev['detectados']}")
+    if ev.get("n_eventos_sin_muestras_evaluables"):
+        print(f"    excluidos            : {ev['n_eventos_sin_muestras_evaluables']} sin muestras evaluables (no cuentan como fallo)")
     print(f"    recall / precision  : {ev['recall']} / {ev['precision']}      F1: {ev['f1']}")
     print(f"    alarmas falsas      : {ev['alarmas_falsas']} de {ev['n_alarmas']}")
     print(f"    FALSAS ALARMAS/unid : {fa['por_unidad']}   (unidad = {fa['horas_por_unidad']} h)")

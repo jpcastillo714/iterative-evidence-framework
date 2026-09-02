@@ -17,12 +17,14 @@ import pytest
 import yaml
 
 BUNDLE = Path(__file__).resolve().parent.parent
-SCRIPTS = BUNDLE / "core" / "scripts"
+SCRIPTS = BUNDLE / "presets" / "astro-mlops" / "scripts"
+CORE = BUNDLE / "core" / "scripts"
 
 
-def _cargar(nombre: str):
-    """Importa un script de core/scripts/ por ruta."""
-    spec = importlib.util.spec_from_file_location(nombre, SCRIPTS / f"{nombre}.py")
+def _cargar(nombre: str, base=None):
+    """Importa un script por ruta: los del preset viven fuera del nucleo."""
+    base = base or SCRIPTS
+    spec = importlib.util.spec_from_file_location(nombre, base / f"{nombre}.py")
     modulo = importlib.util.module_from_spec(spec)
     sys.modules[nombre] = modulo
     spec.loader.exec_module(modulo)
@@ -32,7 +34,7 @@ def _cargar(nombre: str):
 inject = _cargar("inject_faults")
 evalmod = _cargar("eval_anomaly")
 contrato = _cargar("validate_data_contract")
-frame = _cargar("verify_frame")
+frame = _cargar("verify_frame", CORE)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,19 +42,25 @@ frame = _cargar("verify_frame")
 # ─────────────────────────────────────────────────────────────────────────────
 
 def test_preset_existe_y_extiende_academic():
-    p = yaml.safe_load((BUNDLE / "presets/astro-mlops/preset.yml").read_text(encoding="utf-8"))
-    assert p["id"] == "astro-mlops"
-    assert p["extends"] == "academic", "debe heredar la numeracion 00-08 para migrar sin mover archivos"
-    assert p["human_gates"] == [1, 4, 5]
-    assert set(p["supported_increment_types"]) == {"build", "exploration"}
+    crudo = yaml.safe_load((BUNDLE / "presets/astro-mlops/preset.yml").read_text(encoding="utf-8"))
+    assert crudo["id"] == "astro-mlops"
+    assert crudo["extends"] == "academic", "debe heredar la numeracion 00-08 para migrar sin mover archivos"
+
+    preset_mod = _cargar("ief_preset", CORE)
+    p = preset_mod.cargar_preset("astro-mlops", BUNDLE)
+    assert set(p.tipos_de_ciclo()) == {"build", "exploration"}
+    assert [s.ref for s in p.pasos("build") if s.human_gate] == ["1", "4", "5"]
 
 
 def test_preset_declara_sus_herramientas_y_existen():
-    p = yaml.safe_load((BUNDLE / "presets/astro-mlops/preset.yml").read_text(encoding="utf-8"))
-    for _, cfg in p["tooling"].items():
+    preset_mod = _cargar("ief_preset", CORE)
+    p = preset_mod.cargar_preset("astro-mlops", BUNDLE)
+    for _, cfg in p.herramientas.items():
         assert (BUNDLE / cfg["script"]).exists(), f"falta {cfg['script']}"
-    for _, ruta in p["templates"].items():
-        assert (BUNDLE / ruta).exists(), f"falta {ruta}"
+    for tipo in p.tipos_de_ciclo():
+        for paso in p.pasos(tipo):
+            if paso.plantilla:
+                assert (BUNDLE / paso.plantilla).exists(), f"falta {paso.plantilla}"
 
 
 def test_preset_tiene_convencion_y_fragmento():
@@ -87,7 +95,7 @@ def test_extension_registra_el_comando_evidence():
 
 def test_plantilla_telemetria_es_reconocida_por_verify_frame():
     d = yaml.safe_load(
-        (BUNDLE / "core/steps/03_data_contracts/template.telemetry.yml").read_text(encoding="utf-8")
+        (BUNDLE / "presets/astro-mlops/templates/data-contract.telemetry.yml").read_text(encoding="utf-8")
     )
     valido, forma = frame.validate_data_contract_shape(d)
     assert valido and forma == "telemetria"
@@ -105,7 +113,7 @@ def test_verify_frame_acepta_las_tres_formas_de_contrato():
 
 def test_plantilla_reglas_detector_cumple_el_vocabulario():
     d = yaml.safe_load(
-        (BUNDLE / "core/steps/04_business_rules/template.detector.yml").read_text(encoding="utf-8")
+        (BUNDLE / "presets/astro-mlops/templates/business-rules.detector.yml").read_text(encoding="utf-8")
     )
     ids = [r["id"] for r in d["rules"]]
     assert len(ids) == len(set(ids)), "ids de reglas duplicados"
@@ -118,12 +126,12 @@ def test_plantilla_reglas_detector_cumple_el_vocabulario():
 
 def test_plantilla_criterios_anomalia_es_trazable():
     d = yaml.safe_load(
-        (BUNDLE / "core/steps/05_acceptance_tests/template.anomaly.yml").read_text(encoding="utf-8")
+        (BUNDLE / "presets/astro-mlops/templates/acceptance-tests.anomaly.yml").read_text(encoding="utf-8")
     )
     reglas = {
         r["id"]
         for r in yaml.safe_load(
-            (BUNDLE / "core/steps/04_business_rules/template.detector.yml").read_text(encoding="utf-8")
+            (BUNDLE / "presets/astro-mlops/templates/business-rules.detector.yml").read_text(encoding="utf-8")
         )["rules"]
     }
     ids = [t["test_id"] for t in d["tests"]]
@@ -135,7 +143,7 @@ def test_plantilla_criterios_anomalia_es_trazable():
 
 
 def test_criterios_incluyen_las_metricas_no_negociables():
-    texto = (BUNDLE / "core/steps/05_acceptance_tests/template.anomaly.yml").read_text(encoding="utf-8")
+    texto = (BUNDLE / "presets/astro-mlops/templates/acceptance-tests.anomaly.yml").read_text(encoding="utf-8")
     for clave in ("falsas_alarmas_max_por_noche", "cobertura_minima", "lead_time_minimo_h"):
         assert clave in texto
 
@@ -491,8 +499,8 @@ def test_canal_descartado_ausente_no_es_error(frame_datos):
 
 def test_documentacion_del_preset_existe():
     for doc in (
-        "core/docs/anomaly_detection_evaluation_protocol.md",
-        "core/docs/mlops_traceability_spec.md",
+        "presets/astro-mlops/docs/anomaly_detection_evaluation_protocol.md",
+        "presets/astro-mlops/docs/mlops_traceability_spec.md",
         "docs/astro-mlops-adopcion.md",
     ):
         assert (BUNDLE / doc).exists(), f"falta {doc}"

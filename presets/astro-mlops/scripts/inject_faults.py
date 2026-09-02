@@ -23,14 +23,14 @@ validacion contra mantenimiento real, no su reemplazo.
 Uso
 ---
     # Generar una serie nominal de juguete (para probar la herramienta)
-    python core/scripts/inject_faults.py demo --out /tmp/nominal.parquet
+    python presets/astro-mlops/scripts/inject_faults.py demo --out /tmp/nominal.parquet
 
     # Inyeccion unica
-    python core/scripts/inject_faults.py inject --data nominal.parquet --column residuo \\
+    python presets/astro-mlops/scripts/inject_faults.py inject --data nominal.parquet --column residuo \\
         --tipo deriva_lenta --severidad 2.0 --duracion-min 60 --out corrupto.parquet
 
     # Banco completo (tipos x severidades x repeticiones), ventanas disjuntas
-    python core/scripts/inject_faults.py bench --data nominal.parquet --column residuo \\
+    python presets/astro-mlops/scripts/inject_faults.py bench --data nominal.parquet --column residuo \\
         --out 05_datos/benchmark_sintetico --params params.yaml
 
 Salidas del modo `bench`
@@ -204,14 +204,20 @@ def inyectar(
 
     salida = serie.astype(float).copy()
     fin = min(inicio + largo, serie.size)
-    tramo = salida[inicio:fin]
-    if tramo.size < 2:
+    # `.copy()` no es opcional: `salida[inicio:fin]` devuelve una VISTA sobre la
+    # misma memoria. Sin la copia, al escribir el tramo modificado en `salida` el
+    # "antes" se pierde, y el delta de mas abajo compara el resultado consigo
+    # mismo: da cero siempre, `desviacion_max` queda en 0.0 e `inicio_efectivo_idx`
+    # en None. Eso hacia que el lead time se midiera desde el inicio de la ventana
+    # y no desde que el efecto se vuelve observable.
+    original = salida[inicio:fin].copy()
+    if original.size < 2:
         raise ValueError("el tramo a inyectar necesita al menos 2 muestras")
 
-    modificado = MODOS[tipo](tramo.copy(), sigma, severidad, rng)
+    modificado = MODOS[tipo](original.copy(), sigma, severidad, rng)
     salida[inicio:fin] = modificado
 
-    delta = np.abs(np.nan_to_num(modificado) - np.nan_to_num(tramo))
+    delta = np.abs(np.nan_to_num(modificado) - np.nan_to_num(original))
     supera = np.nonzero(delta >= sigma)[0]
     # Instante en que el efecto alcanza 1 sigma: referencia honesta para el lead time.
     inicio_efectivo = int(inicio + supera[0]) if supera.size else None

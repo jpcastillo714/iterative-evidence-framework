@@ -6,9 +6,9 @@ Validador de contratos de telemetria.
 Convierte el artefacto del Paso 3 (data-contract.yml) en un test ejecutable sobre los
 datos reales. Sin datos, valida la forma del contrato (--schema-only): sirve en CI.
 
-    python core/scripts/validate_data_contract.py --contract data-contract.yml
-    python core/scripts/validate_data_contract.py --contract c.yml --data datos.parquet
-    python core/scripts/validate_data_contract.py --contract c.yml --schema-only
+    python presets/astro-mlops/scripts/validate_data_contract.py --contract data-contract.yml
+    python presets/astro-mlops/scripts/validate_data_contract.py --contract c.yml --data datos.parquet
+    python presets/astro-mlops/scripts/validate_data_contract.py --contract c.yml --schema-only
 
 Codigos de salida
     0  sin errores (puede haber advertencias)
