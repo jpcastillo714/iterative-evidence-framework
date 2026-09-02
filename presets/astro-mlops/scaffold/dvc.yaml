@@ -21,8 +21,8 @@ stages:
   validar_contrato:
     # El contrato de datos deja de ser un documento y pasa a ser una compuerta.
     cmd: >-
-      python core/scripts/validate_data_contract.py
-      --contract initiative/increments/ACTIVO/data-contract.yml
+      python presets/astro-mlops/scripts/validate_data_contract.py
+      --contract initiative/specs/data-contract.yml
       --data 05_datos/processed/telemetria_consolidada.parquet
       --report 06_resultados/experimentos/contrato_report.json
     deps:
@@ -54,9 +54,10 @@ stages:
   banco_sintetico:
     # Ground truth fabricado y declarado, porque la telemetria real no trae etiquetas.
     cmd: >-
-      python core/scripts/inject_faults.py bench
+      python presets/astro-mlops/scripts/inject_faults.py bench
       --data 05_datos/processed/episodios.parquet
       --out 05_datos/benchmark_sintetico
+      --cadencia ${datos.cadencia_nominal_s}
       --params params.yaml
     deps:
       - 05_datos/processed/episodios.parquet
@@ -80,16 +81,40 @@ stages:
           cache: false
 
   evaluar:
+    # Los parametros se PASAN al script. Antes se declaraban como dependencia de
+    # DVC pero el script nunca los leia: cambiar `umbral.cuantil_nominal` invalidaba
+    # la etapa y producia exactamente el mismo resultado.
+    #
+    # `--calib` no es opcional: sin un conjunto nominal independiente el umbral se
+    # calibra sobre los negativos del propio conjunto de evaluacion, que es lo que
+    # el invariante P5 prohibe. El script lo avisa, pero aqui no debe llegar a avisarlo.
     cmd: >-
-      python core/scripts/eval_anomaly.py
+      python presets/astro-mlops/scripts/eval_anomaly.py
       --scores 06_resultados/experimentos/scores.parquet
       --labels 05_datos/benchmark_sintetico/injections.yml
+      --calib  06_resultados/experimentos/scores_nominal.parquet
+      --quantile ${umbral.cuantil_nominal}
+      --k-de-n ${umbral.confirmacion_k_de_n[0]} ${umbral.confirmacion_k_de_n[1]}
+      --cadencia ${datos.cadencia_nominal_s}
       --report 06_resultados/experimentos/evaluacion.json
     deps:
       - 06_resultados/experimentos/modelo.pt
+      - 06_resultados/experimentos/scores_nominal.parquet
       - 05_datos/benchmark_sintetico
     params:
+      - umbral
+      - datos
       - evaluacion
     metrics:
       - 06_resultados/experimentos/evaluacion.json:
           cache: false
+
+  criterios_de_aceptacion:
+    # Los criterios del Paso 5, compilados y ejecutados. Cierra el ciclo: la
+    # evaluacion produce el numero, y el criterio aprobado decide si basta.
+    cmd: >-
+      python core/scripts/compile_acceptance_tests.py &&
+      pytest tests/generated -q
+    deps:
+      - 06_resultados/experimentos/evaluacion.json
+      - initiative/state.yml

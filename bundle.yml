@@ -1,51 +1,73 @@
-schema_version: "3.0"
+schema_version: "3.1"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.4.0"
+  version: "0.5.0"
   role: "framework"
-  description: "Bundle oficial del Iterative Evidence Framework V3 (Ciclos Build y Exploration, Multi-incremento, evidencia trazable y preset astro-mlops)"
-  author: "Antigravity Team"
+  description: >-
+    Bundle del Iterative Evidence Framework V3. Ciclos build y exploration definidos
+    por el preset, compuertas humanas verificables, criterios de aceptación ejecutables
+    y promoción de incrementos a una especificación viva.
   license: "MIT"
 
 requires:
   speckit_version: ">=0.16.0"
+  python: ">=3.10"
 
 provides:
   extensions:
     - id: "ief"
-      version: "0.4.0"
+      version: "0.5.0"
       source: "./extension"
+
   workflows:
     - id: "ief-cycle-workflow"
-      version: "0.3.0"
+      version: "0.4.0"
       source: "./workflows/ief-cycle-workflow.yml"
     - id: "minimal-workflow"
       version: "0.1.0"
       source: "./workflows/minimal-workflow.yml"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # El núcleo. No contiene lógica de ningún dominio: eso vive en los presets.
+  # ───────────────────────────────────────────────────────────────────────────
+  tools:
+    - id: "verify-frame"
+      description: "Motor de estado y verificación. Lee el ciclo del preset activo."
+      source: "./core/scripts/verify_frame.py"
+    - id: "ief-preset"
+      description: "Cargador de presets con herencia; define el ciclo de trabajo."
+      source: "./core/scripts/ief_preset.py"
+    - id: "compile-acceptance-tests"
+      description: "Traduce acceptance-tests.yml a un archivo pytest ejecutable."
+      source: "./core/scripts/compile_acceptance_tests.py"
+    - id: "evidence-run"
+      description: "Ejecuta un comando y emite su carpeta VRN con hashes de entradas y salidas."
+      source: "./core/scripts/evidence_run.py"
+
   presets:
     - id: "generic"
-      description: "Preset genérico para proyectos de software"
+      description: "Ciclo base: 7 pasos build, 4 exploration, compuertas en 1, 4 y 5."
       source: "./presets/generic"
     - id: "engineering"
-      description: "Preset para ingeniería de datos y pipelines"
+      description: "Pipelines, ETL e ingeniería de datos. Extiende generic."
       source: "./presets/engineering"
     - id: "academic"
-      description: "Preset para proyectos académicos y tesis"
+      description: "Tesis y papers, numeración 00_admin … 08_presentaciones. Extiende generic."
       source: "./presets/academic"
     - id: "astro-mlops"
-      description: "Preset para detección de anomalías sobre telemetría de instrumentación (extiende academic con trazabilidad MLOps)"
+      description: >-
+        Detección de anomalías sobre telemetría de instrumentación. Extiende academic
+        con contratos de telemetría ejecutables, banco de fallas sintéticas, evaluación
+        por eventos y trazabilidad MLOps. Aporta sus propios scripts en
+        presets/astro-mlops/scripts/.
       source: "./presets/astro-mlops"
-  tools:
-    - id: "validate-data-contract"
-      description: "Valida un contrato de telemetría contra su forma y contra los datos reales"
-      source: "./core/scripts/validate_data_contract.py"
-    - id: "inject-faults"
-      description: "Banco de fallas sintéticas parametrizado en unidades de sigma nominal"
-      source: "./core/scripts/inject_faults.py"
-    - id: "eval-anomaly"
-      description: "Evaluación por eventos, falsas alarmas por unidad operacional y lead time"
-      source: "./core/scripts/eval_anomaly.py"
-    - id: "evidence-run"
-      description: "Ejecuta un comando y emite su carpeta VRN de evidencia (enlaza MLflow si existe)"
-      source: "./core/scripts/evidence_run.py"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Comprobaciones que deben pasar antes de publicar una versión del bundle.
+# ─────────────────────────────────────────────────────────────────────────────
+verification:
+  - "python core/scripts/verify_frame.py --mode check-bundle"
+  - "python core/scripts/verify_frame.py --mode check-preset"
+  - "python core/scripts/verify_frame.py --mode check-steps"
+  - "pytest tests/ -q"

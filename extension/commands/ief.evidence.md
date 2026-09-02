@@ -71,4 +71,4 @@ evidencia sobre la que se decide.
 ## Referencias
 
 - `core/docs/verification_contract_spec.md` — taxonomía de la cadena de evidencia.
-- `core/docs/mlops_traceability_spec.md` — vocabulario de etiquetas y formato de citación.
+- `presets/astro-mlops/docs/mlops_traceability_spec.md` — vocabulario de etiquetas y formato de citación.

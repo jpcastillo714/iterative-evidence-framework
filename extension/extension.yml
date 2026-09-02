@@ -1,83 +1,83 @@
-schema_version: "3.0"
+schema_version: '3.1'
 extension:
-  id: "ief"
-  name: "Iterative Evidence Framework Extension"
-  version: "0.4.0"
-  description: "Extensión del Iterative Evidence Framework (IEF) V3 - Ciclos build y exploration, multi-incremento y evidencia trazable"
-  category: "process"
-  effect: "read-write"
-
+  id: ief
+  name: Iterative Evidence Framework Extension
+  version: 0.5.0
+  description: 'Extension del Iterative Evidence Framework V3: ciclos definidos por
+    el preset, compuertas humanas verificables y criterios de aceptacion ejecutables'
+  category: process
+  effect: read-write
 requires:
-  speckit_version: ">=0.16.0"
-
+  speckit_version: '>=0.16.0'
 provides:
   commands:
-    - name: "speckit.ief.init"
-      aliases: ["ief.init"]
-      description: "Inicializa IEF V3 en el proyecto (scaffold, state.yml, templates)"
-      file: "commands/ief.init.md"
-
-    - name: "speckit.ief.explore"
-      aliases: ["ief.explore"]
-      description: "Inicia un incremento ligero de exploración (3+1 pasos)"
-      file: "commands/ief.explore.md"
-
-    - name: "speckit.ief.pause"
-      aliases: ["ief.pause"]
-      description: "Pausa el incremento activo"
-      file: "commands/ief.pause.md"
-
-    - name: "speckit.ief.rewind"
-      aliases: ["ief.rewind"]
-      description: "Retrocede a un paso anterior marcando pasos como NEEDS_REVISION"
-      file: "commands/ief.rewind.md"
-
-    - name: "speckit.ief.charter"
-      aliases: ["ief.charter"]
-      description: "Paso 1: Crea o actualiza el Charter (build)"
-      file: "commands/ief.charter.md"
-
-    - name: "speckit.ief.inspect"
-      aliases: ["ief.inspect"]
-      description: "Paso 2: Inspección empírica de datos (build)"
-      file: "commands/ief.inspect.md"
-
-    - name: "speckit.ief.contracts"
-      aliases: ["ief.contracts"]
-      description: "Paso 3: Derivar contratos de datos (build)"
-      file: "commands/ief.contracts.md"
-
-    - name: "speckit.ief.rules"
-      aliases: ["ief.rules"]
-      description: "Paso 4: Codificar reglas de negocio (build)"
-      file: "commands/ief.rules.md"
-
-    - name: "speckit.ief.tests"
-      aliases: ["ief.tests"]
-      description: "Paso 5: Generar tests de aceptación (build)"
-      file: "commands/ief.tests.md"
-
-    - name: "speckit.ief.implement"
-      aliases: ["ief.implement"]
-      description: "Paso 6: Ejecutar la implementación (build)"
-      file: "commands/ief.implement.md"
-
-    - name: "speckit.ief.verify"
-      aliases: ["ief.verify"]
-      description: "Paso 7: Ejecutar la suite de verificación (build)"
-      file: "commands/ief.verify.md"
-
-    - name: "speckit.ief.evidence"
-      aliases: ["ief.evidence"]
-      description: "Paso 7: Ejecuta un test y emite su evidencia (VRN + enlace MLflow)"
-      file: "commands/ief.evidence.md"
-
-    - name: "speckit.ief.status"
-      aliases: ["ief.status"]
-      description: "Verifica el estado actual de los incrementos en IEF V3"
-      file: "commands/ief.status.md"
-
-    - name: "speckit.ief.next"
-      aliases: ["ief.next"]
-      description: "Avanza al siguiente paso del incremento activo"
-      file: "commands/ief.next.md"
+  - name: speckit.ief.init
+    aliases:
+    - ief.init
+    description: Inicializa IEF V3 en el proyecto (scaffold, state.yml, templates)
+    file: commands/ief.init.md
+  - name: speckit.ief.explore
+    aliases:
+    - ief.explore
+    description: Inicia un incremento ligero de exploración (3+1 pasos)
+    file: commands/ief.explore.md
+  - name: speckit.ief.pause
+    aliases:
+    - ief.pause
+    description: Pausa el incremento activo
+    file: commands/ief.pause.md
+  - name: speckit.ief.rewind
+    aliases:
+    - ief.rewind
+    description: Retrocede a un paso anterior marcando pasos como NEEDS_REVISION
+    file: commands/ief.rewind.md
+  - name: speckit.ief.charter
+    aliases:
+    - ief.charter
+    description: 'Paso 1: Crea o actualiza el Charter (build)'
+    file: commands/ief.charter.md
+  - name: speckit.ief.inspect
+    aliases:
+    - ief.inspect
+    description: 'Paso 2: Inspección empírica de datos (build)'
+    file: commands/ief.inspect.md
+  - name: speckit.ief.contracts
+    aliases:
+    - ief.contracts
+    description: 'Paso 3: Derivar contratos de datos (build)'
+    file: commands/ief.contracts.md
+  - name: speckit.ief.rules
+    aliases:
+    - ief.rules
+    description: 'Paso 4: Codificar reglas de negocio (build)'
+    file: commands/ief.rules.md
+  - name: speckit.ief.tests
+    aliases:
+    - ief.tests
+    description: 'Paso 5: Generar tests de aceptación (build)'
+    file: commands/ief.tests.md
+  - name: speckit.ief.implement
+    aliases:
+    - ief.implement
+    description: 'Paso 6: Ejecutar la implementación (build)'
+    file: commands/ief.implement.md
+  - name: speckit.ief.verify
+    aliases:
+    - ief.verify
+    description: 'Paso 7: Ejecutar la suite de verificación (build)'
+    file: commands/ief.verify.md
+  - name: speckit.ief.evidence
+    aliases:
+    - ief.evidence
+    description: 'Paso 7: Ejecuta un test y emite su evidencia (VRN + enlace MLflow)'
+    file: commands/ief.evidence.md
+  - name: speckit.ief.status
+    aliases:
+    - ief.status
+    description: Verifica el estado actual de los incrementos en IEF V3
+    file: commands/ief.status.md
+  - name: speckit.ief.next
+    aliases:
+    - ief.next
+    description: Avanza al siguiente paso del incremento activo
+    file: commands/ief.next.md

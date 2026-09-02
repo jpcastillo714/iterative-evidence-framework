@@ -3,7 +3,7 @@
 # Preset: astro-mlops
 #
 # Este contrato NO es documentación: es un test ejecutable.
-#   python core/scripts/validate_data_contract.py \
+#   python presets/astro-mlops/scripts/validate_data_contract.py \
 #       --contract data-contract.yml --data ruta/al.parquet --report reporte.json
 #
 # Regla de oro: cada línea de abajo se deriva de EVIDENCIA de la auditoría del Paso 2,

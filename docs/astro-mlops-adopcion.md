@@ -64,7 +64,7 @@ Referencia: [`core/steps/03_data_contracts/template.telemetry.yml`](../core/step
 Luego, ejecutarlo:
 
 ```bash
-python core/scripts/validate_data_contract.py \
+python presets/astro-mlops/scripts/validate_data_contract.py \
     --contract initiative/increments/<SLUG>/data-contract.yml \
     --data 05_datos/processed/<archivo>.parquet \
     --report 06_resultados/experimentos/contrato_report.json
@@ -84,7 +84,7 @@ Si el periodo analizado resultó enteramente nominal, no hay eventos positivos y
 que reportar. El banco sintético convierte esa pared en un resultado:
 
 ```bash
-python core/scripts/inject_faults.py bench \
+python presets/astro-mlops/scripts/inject_faults.py bench \
     --data 05_datos/processed/episodios.parquet \
     --column residuo --out 05_datos/benchmark_sintetico \
     --params params.yaml
@@ -107,7 +107,7 @@ no demuestran detección de una falla real futura.
 ## 5. Evaluar según el protocolo
 
 ```bash
-python core/scripts/eval_anomaly.py \
+python presets/astro-mlops/scripts/eval_anomaly.py \
     --scores 06_resultados/experimentos/scores.parquet \
     --labels 05_datos/benchmark_sintetico/injections.yml \
     --calib  06_resultados/experimentos/scores_nominal_train.parquet \
@@ -122,7 +122,7 @@ sección de advertencias.
 La salida trae la tabla `recall(tipo, severidad)`. Esa tabla, no un F1 global, es lo que
 responde la pregunta que hará la comisión: *¿qué detecta y desde qué severidad?*
 
-Protocolo completo: [`core/docs/anomaly_detection_evaluation_protocol.md`](../core/docs/anomaly_detection_evaluation_protocol.md).
+Protocolo completo: [`presets/astro-mlops/docs/anomaly_detection_evaluation_protocol.md`](../presets/astro-mlops/docs/anomaly_detection_evaluation_protocol.md).
 
 ---
 
@@ -146,7 +146,7 @@ Formato de citación en el informe:
 
 > **Figura 4.3.** … `VRN-003-007-002` · MLflow `8a1c4f…` · commit `a91b2c` · semilla 42.
 
-Detalle: [`core/docs/mlops_traceability_spec.md`](../core/docs/mlops_traceability_spec.md).
+Detalle: [`presets/astro-mlops/docs/mlops_traceability_spec.md`](../presets/astro-mlops/docs/mlops_traceability_spec.md).
 
 ---
 

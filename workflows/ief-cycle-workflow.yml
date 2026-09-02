@@ -45,12 +45,12 @@ increment_types:
         command: "speckit.ief.explore"
         gates: []
       - id: 2_analysis
-        command: "speckit.ief.explore"
+        command: "speckit.ief.next"
         gates: []
       - id: 2b_data_contract
-        command: "speckit.ief.explore"
+        command: "speckit.ief.contracts"
         optional: true
         gates: []
       - id: 3_findings
-        command: "speckit.ief.explore"
+        command: "speckit.ief.next"
         gates: []

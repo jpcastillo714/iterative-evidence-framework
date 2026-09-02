@@ -32,6 +32,7 @@ el del comando, salvo con --allow-failure (util para registrar un fallo esperado
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -49,7 +50,53 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 
-DIRS_VIGILADOS = ["06_resultados", "05_datos/processed", "outputs", "artifacts"]
+# Se descubren desde el preset activo; esta lista es solo el respaldo cuando no
+# hay preset o el proyecto no declara convencion de directorios.
+DIRS_POR_DEFECTO = ["06_resultados", "05_datos/processed", "outputs", "artifacts", "results"]
+
+
+def sha256(path: Path, tope_bytes: int = 2_000_000_000) -> Optional[str]:
+    """Huella del CONTENIDO. Una ruta apunta a lo que haya hoy; un hash, a esto.
+
+    Es lo que el invariante P7 exige y lo que permite que una cifra citada en el
+    informe siga senalando el archivo con el que se calculo, aunque el pipeline se
+    haya vuelto a ejecutar encima.
+    """
+    try:
+        if path.stat().st_size > tope_bytes:
+            return None
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for bloque in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(bloque)
+        return h.hexdigest()
+    except OSError:
+        return None
+
+
+def huella_entorno(project_dir: Path) -> Dict[str, Any]:
+    """Sin las versiones de las librerias, `python 3.11` no reproduce nada."""
+    info: Dict[str, Any] = {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "cwd": str(project_dir),
+    }
+    for nombre in ("requirements.txt", "pyproject.toml", "uv.lock", "poetry.lock",
+                   "environment.yml", "conda-lock.yml"):
+        f = project_dir / nombre
+        if f.exists():
+            info.setdefault("lockfiles", {})[nombre] = sha256(f)
+    try:
+        out = subprocess.run(
+            [sys.executable, "-m", "pip", "freeze", "--disable-pip-version-check"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            info["pip_freeze_sha256"] = hashlib.sha256(out.stdout.encode()).hexdigest()
+            info["pip_freeze_n_paquetes"] = len(out.stdout.strip().splitlines())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return info
 
 
 # ─── Estado IEF ──────────────────────────────────────────────────────────────
@@ -230,6 +277,12 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--metrics-from", help="JSON del que extraer metricas escalares para MLflow")
     p.add_argument("--watch", action="append", help="directorio adicional a vigilar por artefactos")
+    p.add_argument("--input", action="append",
+                   help="archivo de entrada del que registrar el hash (repetible)")
+    p.add_argument("--timeout", type=float, default=None,
+                   help="segundos maximos de ejecucion; sin esto un pipeline colgado bloquea la CI")
+    p.add_argument("--require-clean", action="store_true",
+                   help="rechaza ejecutar si el arbol git tiene cambios sin commitear")
     p.add_argument("--shell", action="store_true", help="ejecuta el comando en el shell")
     p.add_argument("--no-mlflow", action="store_true")
     p.add_argument("--mlflow-uri")
@@ -253,12 +306,29 @@ def main() -> None:
     vrn_dir = dir_runs / vrn_id
     vrn_dir.mkdir(parents=True, exist_ok=True)
 
-    dirs = list(DIRS_VIGILADOS) + list(args.watch or [])
+    if args.require_clean:
+        estado = git_info(project_dir)
+        if estado.get("dirty"):
+            print(
+                "ERROR: el arbol git tiene cambios sin commitear. Un run sobre un "
+                "arbol sucio no es reproducible: commitea, o ejecuta sin "
+                "--require-clean y el diff quedara guardado en el VRN.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+    dirs = list(DIRS_POR_DEFECTO) + list(args.watch or [])
     antes = snapshot_mtimes(project_dir, dirs)
 
     linea = " ".join(comando)
     print(f"[VRN] {vrn_id}  ({slug})")
     print(f"[CMD] {linea}")
+
+    entorno = os.environ.copy()
+    if args.seed is not None:
+        # Registrar una semilla que no se inyecto es teatro de reproducibilidad.
+        entorno["PYTHONHASHSEED"] = str(args.seed)
+        entorno["IEF_SEED"] = str(args.seed)
 
     t0 = time.time()
     inicio = datetime.now(timezone.utc)
@@ -269,9 +339,17 @@ def main() -> None:
             capture_output=True,
             text=True,
             shell=args.shell,
+            env=entorno,
+            timeout=args.timeout,
         )
         exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
         runner_exit = 0
+    except subprocess.TimeoutExpired as exc:
+        exit_code, runner_exit = None, 1
+        stdout = exc.stdout or ""
+        stderr = (exc.stderr or "") + (
+            f"\nTIMEOUT: el comando supero {args.timeout} s y fue abortado."
+        )
     except (OSError, subprocess.SubprocessError) as exc:
         exit_code, stdout, stderr, runner_exit = None, "", f"{type(exc).__name__}: {exc}", 1
     duracion = round(time.time() - t0, 4)
@@ -302,11 +380,7 @@ def main() -> None:
         "status": estado,
         "duration_seconds": duracion,
         "executed_at": inicio.isoformat(),
-        "environment": {
-            "python": platform.python_version(),
-            "platform": platform.platform(),
-            "cwd": str(project_dir),
-        },
+        "environment": huella_entorno(project_dir),
         "git": git_info(project_dir),
         "seed": args.seed,
     }
@@ -338,7 +412,21 @@ def main() -> None:
             allow_unicode=True,
         )
 
-    doc_art: Dict[str, Any] = {"artifacts": artefactos}
+    doc_art: Dict[str, Any] = {
+        "artifacts": [
+            {
+                "path": rel,
+                "sha256": sha256(project_dir / rel),
+                "bytes": (project_dir / rel).stat().st_size
+                if (project_dir / rel).exists() else None,
+            }
+            for rel in artefactos
+        ],
+        "inputs": [
+            {"path": str(Path(f)), "sha256": sha256(project_dir / f)}
+            for f in (args.input or [])
+        ],
+    }
     if mlflow_info:
         doc_art["mlflow"] = mlflow_info
         print(f"[MLflow] run_id {mlflow_info['run_id']}")

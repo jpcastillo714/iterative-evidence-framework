@@ -40,7 +40,7 @@ banco_de_evaluacion:
     test: "<rango de fechas>"
     nota: "Sin shuffle. Sin partición por fila. Test posterior a train en el tiempo."
   inyeccion_sintetica:
-    script: "core/scripts/inject_faults.py"
+    script: "presets/astro-mlops/scripts/inject_faults.py"
     manifiesto: "05_datos/benchmark_sintetico/injections.yml"
     semilla: 7
     limitacion_declarada: >-
@@ -70,7 +70,7 @@ tests:
     then: "Exit code 0, sin violaciones de rango válido ni valores categóricos nuevos"
     kind: "integration"
     requirement: "required"
-    command: "python core/scripts/validate_data_contract.py --contract initiative/increments/<SLUG>/data-contract.yml --data 05_datos/processed/<archivo>.parquet"
+    command: "python presets/astro-mlops/scripts/validate_data_contract.py --contract initiative/increments/<SLUG>/data-contract.yml --data 05_datos/processed/<archivo>.parquet"
     status: "pending"
 
   # ── Fuga de información ────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ tests:
     then: "falsas_alarmas_por_noche <= presupuesto_operacional.falsas_alarmas_max_por_noche"
     kind: "integration"
     requirement: "required"
-    command: "python core/scripts/eval_anomaly.py --scores <scores> --labels <injections.yml> --report <reporte.json>"
+    command: "python presets/astro-mlops/scripts/eval_anomaly.py --scores <scores> --labels <injections.yml> --report <reporte.json>"
     status: "pending"
     nota: >-
       Este es el criterio que decide si el sistema es usable. Un detector con recall alto y

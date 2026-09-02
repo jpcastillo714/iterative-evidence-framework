@@ -1,7 +1,7 @@
 # Protocolo de evaluación — detección de anomalías en telemetría
 
 **Framework:** Iterative Evidence Framework (IEF) V3 · **Preset:** `astro-mlops`
-**Herramientas:** `core/scripts/inject_faults.py`, `core/scripts/eval_anomaly.py`
+**Herramientas:** `presets/astro-mlops/scripts/inject_faults.py`, `presets/astro-mlops/scripts/eval_anomaly.py`
 **Ámbito:** detección no supervisada sobre series temporales de instrumentación, sin
 historial de fallas etiquetado.
 

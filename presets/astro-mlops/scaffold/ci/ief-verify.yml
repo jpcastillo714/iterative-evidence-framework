@@ -1,8 +1,7 @@
 # .github/workflows/ief-verify.yml
 #
-# Compuerta de CI del preset astro-mlops. Traduce las Human Gates del IEF a una
-# condición mecánica de merge: no se integra un incremento cuyos pasos 1, 4 o 5
-# no estén APPROVED, ni cuyo contrato de telemetría no valide.
+# Compuerta de CI: traduce las Human Gates del IEF a una condicion mecanica de merge.
+# Cada paso de aqui FALLA de verdad; ninguno es decorativo.
 #
 # Copiar a .github/workflows/ en el repositorio del proyecto.
 
@@ -26,22 +25,49 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml pandas pyarrow numpy pytest
+          pip install -r requirements-dev.txt
 
-      - name: Estructura del estado IEF
-        run: python core/scripts/verify_frame.py --mode status --project-dir .
+      # ── Coherencia del framework ─────────────────────────────────────────
+      - name: Presets validos y rutas existentes
+        run: python core/scripts/verify_frame.py --mode check-preset
 
-      - name: Puertas humanas del incremento activo
-        # Falla si un paso con gate quedó COMPLETED sin APPROVED.
-        run: python core/scripts/verify_frame.py --mode verify-step --project-dir .
+      - name: Estructura del bundle
+        run: python core/scripts/verify_frame.py --mode check-bundle
 
-      - name: Contrato de telemetria
-        # --schema-only valida la forma del contrato aunque los datos no esten en CI.
+      # ── La compuerta que de verdad bloquea el merge ──────────────────────
+      - name: Compuertas humanas
+        # Falla (exit 1) si un paso con compuerta quedo COMPLETED sin APPROVED.
+        # Un paso PENDING no cuenta: es trabajo no empezado, no una compuerta violada.
+        run: python core/scripts/verify_frame.py --mode check-gates
+
+      - name: Artefactos del paso actual
+        run: python core/scripts/verify_frame.py --mode verify-step
+
+      # ── Contratos de datos ───────────────────────────────────────────────
+      - name: Contrato de telemetria (forma)
+        # --schema-only valida la forma aunque los datos no esten en CI.
         run: |
-          for c in initiative/increments/*/data-contract.yml; do
+          encontrado=0
+          for c in initiative/specs/data-contract.yml initiative/increments/*/data-contract.yml; do
             [ -e "$c" ] || continue
-            python core/scripts/validate_data_contract.py --contract "$c" --schema-only
+            encontrado=1
+            python presets/astro-mlops/scripts/validate_data_contract.py \
+              --contract "$c" --schema-only
+          done
+          if [ "$encontrado" = "0" ]; then
+            echo "No hay ningun data-contract.yml todavia (paso 3 sin completar)."
+          fi
+
+      # ── Los criterios de aceptacion, ejecutados ──────────────────────────
+      - name: Tests generados al dia respecto del YAML
+        # Si alguien edito acceptance-tests.yml y no recompilo, los tests que
+        # corren no son los criterios aprobados.
+        run: |
+          for d in initiative/increments/*/; do
+            slug=$(basename "$d")
+            [ -e "$d/acceptance-tests.yml" ] || continue
+            python core/scripts/compile_acceptance_tests.py --increment "$slug" --check
           done
 
-      - name: Tests de aceptacion
+      - name: Suite de aceptacion
         run: pytest tests/ -q

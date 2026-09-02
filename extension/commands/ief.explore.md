@@ -1,20 +1,43 @@
-# /speckit.ief.explore
+---
+name: "ief.explore"
+description: "Inicia o continua un incremento de exploracion (ciclo ligero)"
+step_number: null
+---
 
-Inicia un nuevo incremento de tipo `exploration` (ciclo ligero de 3+1 pasos).
+# Exploracion (`/speckit.ief.explore`)
 
-## Protocolo
-1. Preguntar al usuario qué quiere explorar
-2. Generar un slug para el incremento (ej. `004_eda_correlaciones`)
-3. Crear el directorio `initiative/increments/<SLUG>/`
-4. Crear `initiative/increments/<SLUG>/README.md` desde template
-5. Registrar el incremento en `state.yml` como tipo `exploration` con status `ACTIVE`
-6. Actualizar `index.yml`
-7. Iniciar Paso 1 (Objetivo)
+Ciclo ligero para investigar antes de construir. No tiene compuertas humanas: su
+producto es conocimiento, no sistema.
 
-## Pasos del Ciclo Exploration
-| Paso | Nombre | Output |
-|------|--------|--------|
+## Pasos del ciclo
+
+| Paso | Nombre | Artefacto |
+|---|---|---|
 | 1 | Objetivo | `objective.md` |
-| 2 | Análisis | Notebooks, scripts, visualizaciones |
+| 2 | Analisis | `analysis.md` (mas notebooks y figuras) |
 | 2b | Contrato de Datos (opcional) | `data-contract.yml` |
 | 3 | Hallazgos | `findings.md` |
+
+Todos van en `initiative/increments/<SLUG>/`. Confirmar con:
+
+```bash
+python core/scripts/verify_frame.py --mode status --json
+```
+
+## Protocolo
+
+1. Preguntar al usuario que quiere explorar y por que.
+2. Generar el slug (`004_eda_correlaciones`) y crear `initiative/increments/<SLUG>/`.
+3. Registrar el incremento en `state.yml` con `type: exploration` y `status: ACTIVE`.
+4. Recorrer los pasos con `--mode advance`, igual que en un ciclo build.
+
+## Para que sirve de verdad
+
+`findings.md` alimenta el Charter de un futuro incremento `build`. La exploracion es
+donde se permite equivocarse barato: si un hallazgo contradice lo que se creia, ese es
+el resultado, no un fracaso.
+
+## Regla
+
+Nada de lo producido aqui se cita en un informe sin haber pasado por un ciclo `build`
+con sus criterios de aceptacion. Un notebook exploratorio no es evidencia.

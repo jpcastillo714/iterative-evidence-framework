@@ -29,7 +29,7 @@ del preset `academic` más la disciplina de trazabilidad de un pipeline de MLOps
   Que aparezca un valor nuevo es un evento de contrato, no una anomalía del equipo: puede
   ser un cambio de firmware, de configuración o de versión del archivador.
 * **Ejecutable, no declarativo.** El contrato se valida contra los datos reales con
-  `core/scripts/validate_data_contract.py`. Un contrato que nadie ejecuta es un comentario.
+  `presets/astro-mlops/scripts/validate_data_contract.py`. Un contrato que nadie ejecuta es un comentario.
 * Plantilla: `core/steps/03_data_contracts/template.telemetry.yml`.
 
 ### Segmentación y fuga de información
@@ -58,7 +58,7 @@ del preset `academic` más la disciplina de trazabilidad de un pipeline de MLOps
 ### Sin etiquetas: el banco sintético (Paso 5)
 
 * Cuando no hay historial de fallas, **el ground truth se fabrica y se declara**:
-  `core/scripts/inject_faults.py` inyecta deriva lenta, fricción/stiction, juego mecánico,
+  `presets/astro-mlops/scripts/inject_faults.py` inyecta deriva lenta, fricción/stiction, juego mecánico,
   pérdida de ganancia, salto de encoder, ruido creciente, cuantización, valor congelado y
   dropouts, con severidad expresada en **unidades de σ nominal**.
 * El manifiesto de inyección (`injections.yml`) es un **artefacto de evidencia**: sin él, la
@@ -75,8 +75,8 @@ del preset `academic` más la disciplina de trazabilidad de un pipeline de MLOps
   entre ambas. Infla resultados de forma conocida; presentarlo solo es engañoso.
 * **Umbral calibrado sobre nominal**, con el cuantil declarado. Nunca se elige el umbral que
   maximiza F1 en el conjunto de evaluación.
-* Herramienta: `core/scripts/eval_anomaly.py`. Protocolo completo:
-  `core/docs/anomaly_detection_evaluation_protocol.md`.
+* Herramienta: `presets/astro-mlops/scripts/eval_anomaly.py`. Protocolo completo:
+  `presets/astro-mlops/docs/anomaly_detection_evaluation_protocol.md`.
 
 ### Trazabilidad y reproducibilidad
 
@@ -86,7 +86,7 @@ del preset `academic` más la disciplina de trazabilidad de un pipeline de MLOps
 * **Enlace MLflow ↔ IEF.** Si MLflow está disponible, el run se etiqueta con
   `ief.increment`, `ief.claim`, `ief.criterion`, `ief.test` y el `run_id` se escribe en
   `artifacts.yml`. Así, desde una afirmación del informe se llega al dato, al commit, a la
-  semilla y a la figura. Detalle: `core/docs/mlops_traceability_spec.md`.
+  semilla y a la figura. Detalle: `presets/astro-mlops/docs/mlops_traceability_spec.md`.
 * **Datos versionados.** La telemetría cruda es de solo lectura y se referencia por hash
   (DVC). Los derivados se regeneran con un comando; si no se pueden regenerar, no existen.
 * **Configuración fuera del código.** Hiperparámetros, rutas y ventanas en `04_codigo/conf/`.

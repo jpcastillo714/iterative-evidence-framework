@@ -89,7 +89,7 @@ rules:
       de entrenamiento. Se declara el cuantil y la tasa de falsas alarmas teórica que
       implica. Nunca se elige el umbral que maximiza una métrica sobre el conjunto de
       evaluación.
-    source: "Protocolo de evaluación — core/docs/anomaly_detection_evaluation_protocol.md"
+    source: "Protocolo de evaluación — presets/astro-mlops/docs/anomaly_detection_evaluation_protocol.md"
     priority: "CRITICAL"
     status: "DRAFT"
     rationale: >-
