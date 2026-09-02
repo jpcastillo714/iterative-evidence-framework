@@ -1,0 +1,59 @@
+schema_version: "1.0"
+verification_contract:
+  initiative_id: "INI-001"
+  increment_id: "F1.1"
+  contract_created_at: "2026-08-05T16:17:35.034619"
+  
+  claims:
+    - id: "CLM-F1.1-001"
+      statement: "El Charter de la iniciativa ha sido estructurado correctamente en initiative/charter.md sin invención de datos."
+
+  criteria:
+    - id: "CRT-F1.1-001"
+      claim_id: "CLM-F1.1-001"
+      metric: "charter_existence"
+      expected: "present"
+
+    - id: "CRT-F1.1-002"
+      claim_id: "CLM-F1.1-001"
+      metric: "mandatory_sections_present"
+      expected: 5
+
+    - id: "CRT-F1.1-003"
+      claim_id: "CLM-F1.1-001"
+      metric: "initiative_id_validity"
+      expected: "valid_format"
+
+    - id: "CRT-F1.1-004"
+      claim_id: "CLM-F1.1-001"
+      metric: "provenance_registered"
+      expected: "complete"
+
+  tests:
+    - id: "TST-F1.1-001"
+      criterion_id: "CRT-F1.1-001"
+      name: "Charter Existence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-002"
+      criterion_id: "CRT-F1.1-002"
+      name: "Mandatory Sections Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-003"
+      criterion_id: "CRT-F1.1-003"
+      name: "Initiative ID Format Check"
+      kind: "static"
+      requirement: "required"
+      verification_level: "inspected"
+
+    - id: "TST-F1.1-004"
+      criterion_id: "CRT-F1.1-004"
+      name: "Provenance Registration Check"
+      kind: "static"
+      requirement: "required"
+      verification_level: "inspected"

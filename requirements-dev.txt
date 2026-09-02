@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Suite de tests del bundle
+pytest>=8.0

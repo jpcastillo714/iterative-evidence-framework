@@ -1,0 +1,16 @@
+id: chk-05-acceptance-tests
+name: "Verificación de Acceptance Tests"
+automated_checks:
+  - id: auto-01
+    description: "El archivo acceptance-tests.yml existe"
+    script: "test -f acceptance-tests.yml"
+manual_checks:
+  - id: man-01
+    description: "Toda regla de negocio tiene al menos un test asociado."
+  - id: man-02
+    description: "Los tests están libres de detalles técnicos de implementación."
+  - id: man-03
+    description: "User approval received (APPROVED state)"
+  - id: auto-03
+    description: "All tests reference a valid BR-NNN ID"
+    script: "grep -q linked_rule initiative/increments/*/acceptance-tests.yml"

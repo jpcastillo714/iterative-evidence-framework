@@ -1,0 +1,28 @@
+artifact:
+  file_name: iterative-evidence-framework-0.1.0.zip
+  file_path: dist/iterative-evidence-framework-0.1.0.zip
+  sha256: efe52f599ccc9158634d1206625caf162b95ee0a8992fc5e1870352c504bbc04
+  size_bytes: 5386
+  file_count: 7
+contents:
+- README.md
+- bundle.yml
+- core/docs/verification_contract_spec.md
+- core/templates/charter-template.md
+- extension/commands/iterate.frame.md
+- extension/extension.yml
+- workflows/minimal-workflow.yml
+exclusions:
+- tests/
+- verification/
+- .specify/
+- scratch/
+- plan.docx
+- doc.docx
+- task.md
+- compatibility-matrix.yml
+- compatibility-report.md
+- phase-0-evaluation.md
+- phase-0.1-evaluation.md
+- phase-0.2-evaluation.md
+- decision-request.md

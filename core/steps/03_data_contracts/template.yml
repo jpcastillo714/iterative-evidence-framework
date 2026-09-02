@@ -1,0 +1,18 @@
+version: "1.0"
+source: "[Referencia al reporte de inspección o sistema origen]"
+schemas:
+  - name: "EntidadEjemplo"
+    description: "Descripción de la entidad basada en evidencia empírica"
+    fields:
+      - name: "id"
+        type: "string"
+        nullable: false
+        constraints: "UUID v4"
+        description: "Identificador único"
+      - name: "campo_datos"
+        type: "integer"
+        nullable: true
+        constraints: "> 0"
+        description: "Ejemplo de dato extraído"
+validation_rules:
+  - "Regla general de validación a nivel de esquema"

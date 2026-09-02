@@ -1,0 +1,1 @@
+specify bundle validate --path "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle" --offline

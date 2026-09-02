@@ -1,0 +1,5 @@
+status: passed
+command_exit_code: 0
+test_runner_exit_code: 0
+observations:
+- Verified charter.md presence

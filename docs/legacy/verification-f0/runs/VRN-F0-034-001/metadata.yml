@@ -1,0 +1,16 @@
+vrn_id: VRN-F0-034-001
+test_id: TST-F0-034
+name: Real Extension Removal & User Charter Preservation
+command: specify extension remove --force ief
+cwd: C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw
+started_at: '2026-08-05T15:18:25.177007'
+finished_at: '2026-08-05T15:18:26.400337'
+duration_seconds: 1.2233
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: integration
+verification_level: executed
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

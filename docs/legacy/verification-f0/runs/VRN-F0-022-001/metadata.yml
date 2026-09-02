@@ -1,0 +1,16 @@
+vrn_id: VRN-F0-022-001
+test_id: TST-F0-022
+name: Workflow Status Inspection
+command: specify workflow status 2c4e6844 --json
+cwd: C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw
+started_at: '2026-08-05T15:18:22.878969'
+finished_at: '2026-08-05T15:18:23.988888'
+duration_seconds: 1.1099
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: integration
+verification_level: inspected
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

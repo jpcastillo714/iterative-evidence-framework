@@ -1,0 +1,150 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# REGLAS DEL DETECTOR — Paso 4 (build) · HUMAN GATE
+# Preset: astro-mlops
+#
+# Estas son las reglas de dominio del detector de anomalías: lógica pura, sin
+# detalles de implementación. Aquí se decide QUÉ es una anomalía y cuándo el
+# sistema tiene derecho a hablar. El modelo concreto (autoencoder, PCA, iForest)
+# es una decisión del Paso 6, no de este archivo.
+#
+# Formato compatible con core/scripts/verify_frame.py:
+#   id: BR-NNN · description obligatoria · priority CRITICAL|HIGH|MEDIUM|LOW
+#   status: DRAFT | VALIDATED | APPROVED | DEPRECATED
+# ─────────────────────────────────────────────────────────────────────────────
+
+schema_version: "3.1"
+kind: detector_rules
+increment: "<slug del incremento>"
+linked_contract: "data-contract.yml"
+
+rules:
+
+  # ── Admisibilidad de la señal ──────────────────────────────────────────────
+  - id: "BR-001"
+    name: "Solo canales de clase medicion o derivada alimentan al detector"
+    description: >-
+      El vector de entrada del detector se construye exclusivamente con canales cuya
+      `clase` en el contrato sea `medicion` o `derivada`. Consignas, comandos y canales
+      descartados quedan fuera. Los canales de clase `ambiente` solo entran como
+      covariable declarada, nunca como señal de salud.
+    source: "data-contract.yml — campo `clase`"
+    priority: "CRITICAL"
+    status: "DRAFT"
+    rationale: >-
+      Un detector alimentado con consignas aprende el calendario de operación. Detectará
+      cambios de programación observacional y los reportará como fallas del equipo.
+    constraints:
+      - "Toda entrada del modelo tiene clase declarada en el contrato."
+      - "Cualquier excepción se documenta como decisión explícita en el charter."
+
+  - id: "BR-002"
+    name: "El detector opera sobre el residuo, no sobre la señal cruda"
+    description: >-
+      Cuando existe un modelo base que explica el comportamiento nominal a partir de
+      variables exógenas, el detector opera sobre el residuo (observado menos predicho),
+      no sobre la serie cruda.
+    source: "findings.md del incremento de exploración"
+    priority: "CRITICAL"
+    status: "DRAFT"
+    rationale: >-
+      La serie cruda está dominada por la operación programada. El residuo aísla lo que
+      el modelo base no explica, que es donde puede vivir la degradación.
+    constraints:
+      - "El modelo base y sus parámetros se versionan junto al detector."
+
+  # ── Dominio de validez ─────────────────────────────────────────────────────
+  - id: "BR-003"
+    name: "Abstención fuera del dominio de validez del modelo base"
+    description: >-
+      Si las condiciones declaradas en `dominio_de_validez` del contrato no se cumplen,
+      el detector emite `no_evaluable` y NO emite alarma.
+    source: "data-contract.yml — `dominio_de_validez`"
+    priority: "CRITICAL"
+    status: "DRAFT"
+    rationale: >-
+      Fuera del dominio, el residuo mide error del modelo base, no salud del equipo.
+      Alarmar ahí produce falsos positivos sistemáticos y destruye la confianza del
+      operador, que es el activo más caro y más difícil de recuperar del sistema.
+    constraints:
+      - "La fracción de tiempo `no_evaluable` se reporta como métrica de cobertura."
+      - "Una cobertura baja es un hallazgo del trabajo, no un defecto a esconder."
+
+  - id: "BR-004"
+    name: "Los regímenes operacionales no se mezclan"
+    description: >-
+      Una ventana de análisis pertenece a un único régimen operacional. Las ventanas que
+      cruzan una frontera de régimen se descartan o se procesan por separado.
+    source: "data-contract.yml — `segmentacion.nivel_3_micro`"
+    priority: "HIGH"
+    status: "DRAFT"
+    rationale: >-
+      Los regímenes tienen dinámica y varianza nominal distintas. Una sola muestra del
+      régimen equivocado dentro de una ventana basta para disparar una alarma espuria.
+
+  # ── Umbral y confirmación ──────────────────────────────────────────────────
+  - id: "BR-005"
+    name: "El umbral se calibra sobre nominal, con cuantil declarado"
+    description: >-
+      El umbral de alarma es un cuantil de la distribución de scores del conjunto NOMINAL
+      de entrenamiento. Se declara el cuantil y la tasa de falsas alarmas teórica que
+      implica. Nunca se elige el umbral que maximiza una métrica sobre el conjunto de
+      evaluación.
+    source: "Protocolo de evaluación — core/docs/anomaly_detection_evaluation_protocol.md"
+    priority: "CRITICAL"
+    status: "DRAFT"
+    rationale: >-
+      Elegir el umbral sobre el conjunto de evaluación es fuga de información y produce
+      resultados que no se reproducen en operación.
+    constraints:
+      - "El cuantil se fija ANTES de mirar los resultados de evaluación."
+
+  - id: "BR-006"
+    name: "Confirmación k-de-n antes de declarar alarma"
+    description: >-
+      Un score sobre el umbral no es una alarma. Se requieren k excedencias dentro de una
+      ventana de n muestras consecutivas para declarar alarma, con k y n declarados.
+    source: "Requisito operacional"
+    priority: "HIGH"
+    status: "DRAFT"
+    rationale: >-
+      La histéresis convierte una tasa de falsas alarmas puntual en una tasa de falsas
+      alarmas operacional manejable, a costa de un retraso acotado y cuantificable.
+    constraints:
+      - "El retraso introducido por la confirmación se reporta junto al lead time."
+
+  # ── Salida ─────────────────────────────────────────────────────────────────
+  - id: "BR-007"
+    name: "Toda alarma es atribuible a canales concretos"
+    description: >-
+      La salida del detector incluye la contribución por canal al score, de modo que la
+      alarma sea accionable por quien mantiene el equipo.
+    source: "Requisito operacional"
+    priority: "MEDIUM"
+    status: "DRAFT"
+    rationale: >-
+      Una alarma sin atribución obliga al operador a auditar el sistema completo. Se
+      ignora a la tercera vez.
+
+  - id: "BR-008"
+    name: "Cambio de contrato antes que ajuste de umbral"
+    description: >-
+      Si la tasa de alarmas se dispara por un cambio de régimen, de firmware o de
+      configuración, la respuesta es actualizar el contrato y reentrenar mediante
+      `/speckit.ief.rewind`. NO se ajusta el umbral a mano para silenciar el sistema.
+    source: "Invariantes del preset astro-mlops (P4, P5)"
+    priority: "CRITICAL"
+    status: "DRAFT"
+    rationale: >-
+      Ajustar el umbral a posteriori destruye la trazabilidad entre lo que se reportó y lo
+      que el sistema hace. Es la forma más común de falsificar evidencia sin proponérselo.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Decisiones abiertas — se resuelven en el gate, no en la implementación
+# ─────────────────────────────────────────────────────────────────────────────
+decisiones_pendientes:
+  - pregunta: "¿Un modelo por unidad o un modelo compartido?"
+    evidencia_necesaria: "Comparación de la distribución nominal entre unidades."
+    impacto: "Determina el presupuesto de datos por modelo."
+  - pregunta: "¿Cuál es la definición operacional de anomalía para quien opera el equipo?"
+    evidencia_necesaria: "Entrevista con operaciones o mantenimiento."
+    impacto: "Sin ella, el detector no tiene contra qué validarse."

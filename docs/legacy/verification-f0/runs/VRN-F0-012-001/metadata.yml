@@ -1,0 +1,17 @@
+vrn_id: VRN-F0-012-001
+test_id: TST-F0-012
+name: Charter.md creation from template
+command: C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "import
+  os; assert os.path.exists(r'C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw\charter.md')"
+cwd: C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw
+started_at: '2026-08-05T15:18:20.038341'
+finished_at: '2026-08-05T15:18:20.214285'
+duration_seconds: 0.1759
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: unit
+verification_level: inspected
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

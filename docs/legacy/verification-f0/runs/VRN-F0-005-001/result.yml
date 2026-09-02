@@ -1,0 +1,5 @@
+status: passed
+command_exit_code: 0
+test_runner_exit_code: 0
+observations:
+- Builds versioned .zip artifact containing 24 files

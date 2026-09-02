@@ -1,0 +1,1 @@
+grep '## 4. Stakeholders Conocidos' initiative/charter.md

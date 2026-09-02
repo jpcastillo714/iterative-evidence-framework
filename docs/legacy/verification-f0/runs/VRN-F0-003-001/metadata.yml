@@ -1,0 +1,18 @@
+vrn_id: VRN-F0-003-001
+test_id: TST-F0-003
+name: Validate workflow schema
+command: C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "from
+  specify_cli.workflows.engine import WorkflowDefinition; wf = WorkflowDefinition.from_yaml(r'C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\workflows\minimal-workflow.yml');
+  assert wf.id == 'minimal-workflow'"
+cwd: C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle
+started_at: '2026-08-05T15:18:11.553637'
+finished_at: '2026-08-05T15:18:12.610954'
+duration_seconds: 1.0573
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: static
+verification_level: inspected
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

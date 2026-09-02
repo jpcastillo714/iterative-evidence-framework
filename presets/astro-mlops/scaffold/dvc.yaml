@@ -1,0 +1,95 @@
+# dvc.yaml — el pipeline como grafo reproducible.
+# Cada etapa declara dependencias, parámetros y salidas: dvc repro reconstruye
+# exactamente lo necesario y dvc.lock fija el hash de cada dato producido.
+#
+# Regla del preset: si una figura del informe no sale de una etapa de este grafo,
+# no es reproducible y no se cita.
+
+stages:
+
+  consolidar:
+    cmd: python 04_codigo/pipelines/consolidar.py
+    deps:
+      - 04_codigo/pipelines/consolidar.py
+      - 04_codigo/src
+      - 05_datos/raw
+    params:
+      - datos
+    outs:
+      - 05_datos/processed/telemetria_consolidada.parquet
+
+  validar_contrato:
+    # El contrato de datos deja de ser un documento y pasa a ser una compuerta.
+    cmd: >-
+      python core/scripts/validate_data_contract.py
+      --contract initiative/increments/ACTIVO/data-contract.yml
+      --data 05_datos/processed/telemetria_consolidada.parquet
+      --report 06_resultados/experimentos/contrato_report.json
+    deps:
+      - 05_datos/processed/telemetria_consolidada.parquet
+    outs:
+      - 06_resultados/experimentos/contrato_report.json:
+          cache: false
+
+  segmentar:
+    cmd: python 04_codigo/pipelines/segmentar.py
+    deps:
+      - 04_codigo/pipelines/segmentar.py
+      - 05_datos/processed/telemetria_consolidada.parquet
+    params:
+      - segmentacion
+    outs:
+      - 05_datos/processed/episodios.parquet
+
+  ventanas:
+    cmd: python 04_codigo/pipelines/ventanas.py
+    deps:
+      - 04_codigo/pipelines/ventanas.py
+      - 05_datos/processed/episodios.parquet
+    params:
+      - ventanas
+    outs:
+      - 05_datos/processed/ventanas.npz
+
+  banco_sintetico:
+    # Ground truth fabricado y declarado, porque la telemetria real no trae etiquetas.
+    cmd: >-
+      python core/scripts/inject_faults.py bench
+      --data 05_datos/processed/episodios.parquet
+      --out 05_datos/benchmark_sintetico
+      --params params.yaml
+    deps:
+      - 05_datos/processed/episodios.parquet
+    params:
+      - benchmark_sintetico
+    outs:
+      - 05_datos/benchmark_sintetico
+
+  entrenar:
+    cmd: python 04_codigo/pipelines/entrenar.py
+    deps:
+      - 04_codigo/pipelines/entrenar.py
+      - 05_datos/processed/ventanas.npz
+    params:
+      - modelo
+      - umbral
+    outs:
+      - 06_resultados/experimentos/modelo.pt
+    metrics:
+      - 06_resultados/experimentos/metricas_entrenamiento.json:
+          cache: false
+
+  evaluar:
+    cmd: >-
+      python core/scripts/eval_anomaly.py
+      --scores 06_resultados/experimentos/scores.parquet
+      --labels 05_datos/benchmark_sintetico/injections.yml
+      --report 06_resultados/experimentos/evaluacion.json
+    deps:
+      - 06_resultados/experimentos/modelo.pt
+      - 05_datos/benchmark_sintetico
+    params:
+      - evaluacion
+    metrics:
+      - 06_resultados/experimentos/evaluacion.json:
+          cache: false

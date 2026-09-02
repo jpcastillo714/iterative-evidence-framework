@@ -1,0 +1,1 @@
+specify extension remove --force ief

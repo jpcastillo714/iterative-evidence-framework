@@ -1,0 +1,14 @@
+id: chk-06-implementation
+name: "Verificación de Implementación"
+automated_checks:
+  - id: auto-01
+    description: "Los linters pasan correctamente"
+    script: "echo 'Ejecuta tu linter favorito (ej. ruff check .)'"
+manual_checks:
+  - id: man-01
+    description: "El código implementado respeta estrictamente los Data Contracts."
+  - id: man-02
+    description: "La implementación cubre todas las Business Rules designadas para el ciclo."
+  - id: auto-02
+    description: "No NEEDS_REVISION flags pending from rollback"
+    script: "! grep -q NEEDS_REVISION initiative/state.yml"

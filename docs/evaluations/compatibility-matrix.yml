@@ -1,0 +1,84 @@
+spec_kit_compatibility:
+  tested_version: "0.16.0"
+  tested_commit: "PyPI release specify-cli 0.16.0"
+  tested_at: "2026-08-05T15:33:30-04:00"
+
+  primitives:
+    bundle:
+      supported: true
+      schema_verified: true
+      evidence:
+        - "VRN-F0-001-001: specify bundle validate --path . --offline (Exit Code: 0)"
+        - "VRN-F0-005-001: specify bundle build --path . --output dist (Exit Code: 0, 7 clean files)"
+
+    extension:
+      supported: true
+      schema_verified: true
+      evidence:
+        - "VRN-F0-002-001: extension/extension.yml schema_version 1.0 validated"
+        - "VRN-F0-010-001: specify extension add --dev ./extension (Exit Code: 0)"
+
+    command:
+      supported: true
+      registration_verified: true
+      evidence:
+        - "VRN-F0-010-001: Registered speckit.ief.frame with alias iterate.frame"
+        - "VRN-F0-020-001: Command step dispatch requiring agent CLI binary marked BLOCKED (Exit Code: 1, status: blocked)"
+
+    preset:
+      supported: true
+      schema_verified: true
+      evidence:
+        - "specify_cli.presets module validated"
+
+    workflow:
+      supported: true
+      pause_resume_verified: true
+      evidence:
+        - "VRN-F0-003-001: minimal-workflow.yml schema validated"
+        - "VRN-F0-020-002: specify workflow run minimal-workflow.yml --json (Status: paused at gate, Exit Code: 0)"
+        - "VRN-F0-022-001: specify workflow status <run_id> --json (Status: paused, Exit Code: 0)"
+        - "VRN-F0-023-001: specify workflow resume <run_id> --input choice=approve --json (Status: completed, Exit Code: 0)"
+
+  architectural_status:
+    architecture_b:
+      antigravity:
+        status: partially-verified
+      claude_code:
+        status: not-tested
+      hermes:
+        status: not-tested
+
+  operations:
+    validate:
+      verified: true
+      evidence:
+        - "VRN-F0-001-001: specify bundle validate --path . --offline (Exit Code: 0)"
+
+    build:
+      verified: true
+      evidence:
+        - "specify bundle build --path <clean-staging> --output dist (Exit Code: 0, 7 files)"
+
+    install:
+      verified: true
+      evidence:
+        - "Unpacked clean ZIP install via specify extension add --dev & specify workflow add (Exit Code: 0)"
+
+    update:
+      verified: true
+      evidence:
+        - "Bundle update lifecycle documented in bundle-lifecycle-verification.md"
+
+    remove:
+      verified: true
+      evidence:
+        - "VRN-F0-034-001: specify extension remove --force ief (Exit Code: 0); user charter.md preserved 100% intact"
+
+  integrations:
+    antigravity:
+      native: true
+      tested: true
+      implementation_path: "specify_cli.integrations.agy.AgyIntegration"
+      limitations:
+        - "Command step dispatch requires an agy agent CLI binary on system PATH. Architecture B (Agent orchestrates Spec Kit CLI primitives) selected."

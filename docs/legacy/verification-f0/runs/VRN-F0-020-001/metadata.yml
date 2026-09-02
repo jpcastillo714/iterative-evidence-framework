@@ -1,0 +1,16 @@
+vrn_id: VRN-F0-020-001
+test_id: TST-F0-020
+name: Workflow Command Step Dispatch (No Agent CLI)
+command: specify workflow run minimal-workflow --json
+cwd: C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw
+started_at: '2026-08-05T15:18:20.331975'
+finished_at: '2026-08-05T15:18:21.566988'
+duration_seconds: 1.235
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: integration
+verification_level: executed
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: blocked

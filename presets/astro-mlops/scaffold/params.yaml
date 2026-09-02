@@ -1,0 +1,57 @@
+# params.yaml — parámetros del pipeline, versionados junto al código.
+# DVC los rastrea: cambiar un valor invalida solo las etapas que dependen de él.
+
+datos:
+  cadencia_nominal_s: 20          # periodo de archivado
+  tolerancia_merge_s: 25          # ventana de merge_asof entre canales
+  imputar: false                  # NUNCA true: los NaN marcan huecos reales
+  centinelas_a_nan: true
+
+segmentacion:
+  # Nivel 1: macro (contexto operacional)
+  ventana_operacion_utc: [22, 10]
+  # Nivel 2: episodio (unidad de análisis)
+  episodio_tolerancia_arcmin: 1.0
+  episodio_duracion_minima_min: 5
+  # Nivel 3: micro (régimen)
+  salto_de_regimen_deg: 5.0       # discontinuidad que separa seguimiento de reposicionamiento
+
+ventanas:
+  largo_L: 64                     # muestras por ventana
+  paso_s: 16                      # solapamiento
+  descartar_ventanas_con_nan: true
+
+modelo:
+  semilla: 42
+  tipo: "autoencoder"             # extractor profundo
+  latente: 8
+  detector: "mahalanobis"         # detector clásico sobre el espacio latente
+  epocas: 50
+  batch: 256
+  lr: 1.0e-3
+
+umbral:
+  # Calibrado SOLO sobre el conjunto nominal de entrenamiento (invariante P5)
+  cuantil_nominal: 0.999
+  confirmacion_k_de_n: [3, 5]     # k alarmas en n muestras consecutivas para confirmar
+
+benchmark_sintetico:
+  semilla: 7
+  severidades_sigma: [0.5, 1.0, 2.0, 4.0]
+  duracion_min: [15, 60, 240]
+  tipos:
+    - deriva_lenta
+    - stiction
+    - juego_mecanico
+    - perdida_ganancia
+    - salto_encoder
+    - ruido_creciente
+    - cuantizacion
+    - valor_congelado
+    - dropout
+  repeticiones_por_celda: 10
+
+evaluacion:
+  criterio_evento: "solape"       # un evento se detecta si alguna alarma lo intersecta
+  reportar_point_adjust: true     # solo junto a la métrica por eventos (invariante P6)
+  far_por: "noche"

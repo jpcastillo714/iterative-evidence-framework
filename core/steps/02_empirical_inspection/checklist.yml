@@ -1,0 +1,11 @@
+id: chk-02-inspection
+name: "Verificación de Inspección Empírica"
+automated_checks:
+  - id: auto-01
+    description: "El archivo inspection-report.md existe"
+    script: "test -f inspection-report.md"
+manual_checks:
+  - id: man-01
+    description: "La inspección se basa en datos reales, no en suposiciones."
+  - id: man-02
+    description: "Se han identificado y documentado casos límite o anomalías en los datos."

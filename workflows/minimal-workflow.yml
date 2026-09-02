@@ -1,0 +1,39 @@
+schema_version: "1.0"
+workflow:
+  id: "minimal-workflow"
+  name: "Minimal IEF Workflow"
+  version: "0.1.0"
+  description: "Workflow vertical de la Fase 0 para inicializar charter.md y solicitar validación mediante gate humano."
+
+inputs:
+  initiative_name:
+    type: string
+    description: "Nombre de la iniciativa"
+    default: "Iniciativa de Prueba F0"
+  choice:
+    type: string
+    description: "Decisión del gate (approve / reject)"
+    default: ""
+
+steps:
+  - id: init
+    type: shell
+    run: echo "Iniciando workflow vertical slice Fase 0..."
+
+  - id: checkpoint
+    type: gate
+    message: "Por favor revise el archivo charter.md antes de continuar."
+    verdict_input: "choice"
+    options:
+      - "approve"
+      - "reject"
+    on_reject: "abort"
+    show_file: "charter.md"
+
+  - id: verify
+    type: shell
+    run: echo "Verificación post-gate completada."
+
+  - id: complete
+    type: shell
+    run: echo "Workflow vertical slice finalizado con éxito."

@@ -1,0 +1,13 @@
+id: chk-04-business-rules
+name: "Verificación de Business Rules"
+automated_checks:
+  - id: auto-01
+    description: "El archivo business-rules.yml existe"
+    script: "test -f business-rules.yml"
+manual_checks:
+  - id: man-01
+    description: "Cada regla tiene un ID único y atómico."
+  - id: man-02
+    description: "Todas las reglas están trazadas a una fuente verificable."
+  - id: man-03
+    description: "User approval received (APPROVED state)"

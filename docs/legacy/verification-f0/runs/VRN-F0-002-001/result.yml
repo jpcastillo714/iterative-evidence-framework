@@ -1,0 +1,5 @@
+status: passed
+command_exit_code: 0
+test_runner_exit_code: 0
+observations:
+- Validates extension.yml parsing and canonical command naming

@@ -1,0 +1,8 @@
+step: 2b_data_contract
+type: exploration
+optional: true
+criteria:
+  - id: CHK-EXP-02B-001
+    description: "Si el archivo existe, es un YAML válido con la estructura de contratos de IEF"
+    type: automated
+    target: "data-contract.yml"

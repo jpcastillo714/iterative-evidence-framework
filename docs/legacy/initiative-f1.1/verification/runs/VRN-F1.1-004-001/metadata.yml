@@ -1,0 +1,9 @@
+vrn_id: VRN-F1.1-004-001
+test_id: TST-F1.1-004
+name: Outcome Section Presence Check
+test_type: integration
+verification_level: executed
+command_exit_code: 0
+test_runner_exit_code: 0
+status: passed
+executed_at: '2026-08-05T16:22:57.049122'

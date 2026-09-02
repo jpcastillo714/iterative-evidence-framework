@@ -1,0 +1,18 @@
+step: 1_objective
+type: exploration
+criteria:
+  - id: CHK-EXP-01-001
+    description: "El documento de objetivo existe"
+    type: automated
+    target: "objective.md"
+  - id: CHK-EXP-01-002
+    description: "Contiene una pregunta de investigación concreta"
+    type: automated
+    target: "## 1. Pregunta a Responder"
+  - id: CHK-EXP-01-003
+    description: "Lista al menos una fuente de datos a inspeccionar"
+    type: automated
+    target: "## 2. Datos y Fuentes"
+  - id: CHK-EXP-01-004
+    description: "Define criterio de éxito medible"
+    type: manual

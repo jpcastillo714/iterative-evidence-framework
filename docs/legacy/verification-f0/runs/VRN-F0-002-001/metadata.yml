@@ -1,0 +1,18 @@
+vrn_id: VRN-F0-002-001
+test_id: TST-F0-002
+name: Validate extension manifest
+command: C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "import
+  yaml; d = yaml.safe_load(open(r'C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\extension\extension.yml'));
+  assert d['schema_version'] == '1.0'; assert d['extension']['id'] == 'ief'"
+cwd: C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle
+started_at: '2026-08-05T15:18:11.327877'
+finished_at: '2026-08-05T15:18:11.546565'
+duration_seconds: 0.2187
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: static
+verification_level: inspected
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

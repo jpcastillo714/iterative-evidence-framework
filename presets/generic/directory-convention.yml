@@ -1,0 +1,9 @@
+directories:
+  - path: "initiative"
+    description: "Artefactos de IEF, estado e índice de la iniciativa."
+  - path: "scratch"
+    description: "Archivos temporales, scripts de prueba (playground)."
+  - path: "src"
+    description: "Código fuente principal del proyecto."
+  - path: "tests"
+    description: "Pruebas de aceptación y unitarias."

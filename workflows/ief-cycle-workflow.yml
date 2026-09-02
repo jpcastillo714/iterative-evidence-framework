@@ -1,0 +1,56 @@
+schema_version: "3.0"
+workflow:
+  id: "ief-cycle-workflow"
+  name: "Iterative Evidence Framework Cycle V3"
+  version: "0.3.0"
+  description: "Ejecución de incrementos Build (7 pasos) y Exploration (3+1 pasos)"
+
+increment_types:
+  build:
+    steps:
+      - id: 1_charter
+        command: "speckit.ief.charter"
+        gates:
+          - type: human
+            status: APPROVED
+      - id: 2_empirical_inspection
+        command: "speckit.ief.inspect"
+        gates: []
+      - id: 3_data_contracts
+        command: "speckit.ief.contracts"
+        gates: []
+      - id: 4_business_rules
+        command: "speckit.ief.rules"
+        gates:
+          - type: human
+            status: APPROVED
+      - id: 5_acceptance_tests
+        command: "speckit.ief.tests"
+        gates:
+          - type: human
+            status: APPROVED
+      - id: 6_implementation
+        command: "speckit.ief.implement"
+        gates: []
+      - id: 7_verification
+        command: "speckit.ief.verify"
+        gates: []
+        rewind_paths:
+          - to: 4_business_rules
+          - to: 5_acceptance_tests
+
+  exploration:
+    steps:
+      - id: 1_objective
+        command: "speckit.ief.explore"
+        gates: []
+      - id: 2_analysis
+        command: "speckit.ief.explore"
+        gates: []
+      - id: 2b_data_contract
+        command: "speckit.ief.explore"
+        optional: true
+        gates: []
+      - id: 3_findings
+        command: "speckit.ief.explore"
+        gates: []

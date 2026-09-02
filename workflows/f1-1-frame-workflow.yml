@@ -1,0 +1,38 @@
+schema_version: "1.0"
+workflow:
+  id: "f1-1-frame-workflow"
+  name: "F1.1 Frame Verificable Workflow"
+  version: "0.1.0"
+  description: "Workflow F1.1 para encuadrar iniciativa en initiative/charter.md, ejecutar verificaciones y pausar en gate humano."
+
+inputs:
+  initiative_name:
+    type: string
+    description: "Nombre de la iniciativa"
+    default: "Iniciativa de Prueba F1.1"
+  choice:
+    type: string
+    description: "Decisión del gate (approve / reject)"
+    default: ""
+
+steps:
+  - id: init
+    type: shell
+    run: python -c "print('Iniciando workflow F1.1 Frame Verificable...')"
+
+  - id: frame_and_verify
+    type: shell
+    run: python core/scripts/verify_frame.py --initiative-name "$initiative_name"
+
+  - id: checkpoint
+    type: gate
+    message: "Por favor revise initiative/charter.md e initiative/verification/verification-summary.md antes de continuar."
+    verdict_input: "choice"
+    options:
+      - "approve"
+      - "reject"
+    on_reject: "abort"
+
+  - id: complete
+    type: shell
+    run: python -c "print('Workflow F1.1 finalizado exitosamente tras decisión aprobatoria del gate humano.')"

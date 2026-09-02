@@ -1,0 +1,16 @@
+id: chk-01-charter
+name: "Verificación de Charter"
+automated_checks:
+  - id: auto-01
+    description: "El archivo initiative/charter.md existe"
+    script: "test -f initiative/charter.md"
+  - id: auto-02
+    description: "Contiene las 7 secciones canónicas"
+    script: "grep -q '## 1. Purpose' initiative/charter.md"
+manual_checks:
+  - id: man-01
+    description: "No hay alucinaciones; todo dato desconocido está marcado como PENDING."
+  - id: man-02
+    description: "Los objetivos y resultados esperados son claros y medibles."
+  - id: man-03
+    description: "User approval received (APPROVED state)"

@@ -1,0 +1,16 @@
+schema_version: "3.0"
+initiative_id: "{{INITIATIVE_ID}}"
+increments:
+  - id: "001"
+    slug: "{{FIRST_INCREMENT_SLUG}}"
+    name: "{{FIRST_INCREMENT_NAME}}"
+    type: "build"  # build | exploration
+    status: "ACTIVE"  # ACTIVE | PAUSED | BLOCKED | COMPLETED | ABANDONED
+    started_at: "{{CREATED_AT}}"
+    completed_at: null
+    # Campos para PAUSED/BLOCKED
+    # paused_reason: null
+    # blocked_by: null
+    # blocked_reason: null
+    learnings: []
+    artifacts_produced: []

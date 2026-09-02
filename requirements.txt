@@ -1,0 +1,8 @@
+# Dependencias del núcleo IEF (motor de estado y evidencia).
+PyYAML>=6.0
+
+# Dependencias de los presets que validan o evalúan datos reales
+# (astro-mlops). El núcleo funciona sin ellas.
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14.0

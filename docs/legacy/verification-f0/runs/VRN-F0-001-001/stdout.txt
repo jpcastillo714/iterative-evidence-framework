@@ -1,0 +1,5 @@
+! Could not verify extension 'ief' offline (not bundled or installed); re-run 
+validate online to check catalogs.
+! Could not verify workflow 'minimal-workflow' offline (not bundled or 
+installed); re-run validate online to check catalogs.
+✓ iterative-evidence-framework is well-formed and valid.

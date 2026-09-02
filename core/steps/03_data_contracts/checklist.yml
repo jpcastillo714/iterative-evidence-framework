@@ -1,0 +1,11 @@
+id: chk-03-data-contracts
+name: "Verificación de Data Contracts"
+automated_checks:
+  - id: auto-01
+    description: "El archivo data-contract.yml existe"
+    script: "test -f data-contract.yml"
+manual_checks:
+  - id: man-01
+    description: "Cada campo en el contrato refleja la realidad empírica inspeccionada."
+  - id: man-02
+    description: "Las reglas de validación son claras y aplicables."

@@ -1,0 +1,5 @@
+status: passed
+command_exit_code: 0
+test_runner_exit_code: 0
+observations:
+- Status verified as paused for Run ID 2c4e6844

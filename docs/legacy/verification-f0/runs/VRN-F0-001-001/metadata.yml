@@ -1,0 +1,17 @@
+vrn_id: VRN-F0-001-001
+test_id: TST-F0-001
+name: Validate bundle manifest
+command: specify bundle validate --path "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle"
+  --offline
+cwd: C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle
+started_at: '2026-08-05T15:18:10.291526'
+finished_at: '2026-08-05T15:18:11.319540'
+duration_seconds: 1.028
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: static
+verification_level: executed
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

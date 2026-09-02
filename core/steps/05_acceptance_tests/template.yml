@@ -1,0 +1,8 @@
+tests:
+  - id: "TST-ACC-001"
+    linked_rule: "BR-001"
+    scenario: "Validación de escenario nominal"
+    given: "Un estado inicial específico del sistema"
+    when: "El usuario o sistema realiza una acción"
+    then: "El resultado esperado ocurre o el estado cambia acordemente"
+    status: "pending" # pending, passing, failing

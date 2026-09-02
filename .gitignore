@@ -1,0 +1,29 @@
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ─── Artefactos de ejecución del framework ───────────────────────────────────
+# Los runs de workflows son estado local, no fuente.
+.specify/workflows/runs/
+
+# ─── Scratch: playground, nunca es fuente ────────────────────────────────────
+scratch/
+
+# ─── Distribución: se regenera con `python -m build` o el empaquetador ───────
+dist/
+build/
+
+# ─── Datos y resultados (nunca al repo del framework) ────────────────────────
+*.parquet
+*.pq
+mlruns/
+
+# ─── Sistema operativo ───────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store

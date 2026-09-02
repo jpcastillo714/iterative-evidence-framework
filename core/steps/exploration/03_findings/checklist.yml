@@ -1,0 +1,14 @@
+step: 3_findings
+type: exploration
+criteria:
+  - id: CHK-EXP-03-001
+    description: "El documento de hallazgos existe"
+    type: automated
+    target: "findings.md"
+  - id: CHK-EXP-03-002
+    description: "Cada hallazgo tiene Evidencia, Implicación y Confianza"
+    type: manual
+  - id: CHK-EXP-03-003
+    description: "Incluye al menos una recomendación para el siguiente incremento"
+    type: automated
+    target: "## 4. Recomendaciones para Siguientes Incrementos"

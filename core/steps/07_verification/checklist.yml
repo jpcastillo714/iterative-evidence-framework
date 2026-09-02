@@ -1,0 +1,11 @@
+id: chk-07-verification
+name: "Verificación del Ciclo"
+automated_checks:
+  - id: auto-01
+    description: "El reporte de incremento existe"
+    script: "test -f increment-report.md"
+manual_checks:
+  - id: man-01
+    description: "Se han documentado los aprendizajes y recomendaciones."
+  - id: man-02
+    description: "El estado global de la iniciativa ha sido actualizado."

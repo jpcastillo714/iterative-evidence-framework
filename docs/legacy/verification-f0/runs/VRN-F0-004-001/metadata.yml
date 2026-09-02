@@ -1,0 +1,16 @@
+vrn_id: VRN-F0-004-001
+test_id: TST-F0-004
+name: Inspect uninstalled bundle info
+command: specify bundle info iterative-evidence-framework --offline
+cwd: C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle
+started_at: '2026-08-05T15:18:12.619820'
+finished_at: '2026-08-05T15:18:13.720941'
+duration_seconds: 1.1011
+command_exit_code: 1
+test_runner_exit_code: 0
+test_type: negative
+verification_level: executed
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

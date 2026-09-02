@@ -1,0 +1,9 @@
+rules:
+  - id: "BR-001"
+    name: "Nombre descriptivo de la regla"
+    description: "Explicación detallada de la lógica de negocio a aplicar."
+    source: "Reunión de kickoff / charter.md"
+    priority: "high" # high, medium, low
+    status: "active" # active, pending, deprecated
+    constraints:
+      - "Condición específica 1"

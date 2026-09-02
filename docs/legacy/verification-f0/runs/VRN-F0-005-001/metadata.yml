@@ -1,0 +1,17 @@
+vrn_id: VRN-F0-005-001
+test_id: TST-F0-005
+name: Build bundle artifact
+command: specify bundle build --path "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle"
+  --output "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\dist"
+cwd: C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle
+started_at: '2026-08-05T15:18:13.729265'
+finished_at: '2026-08-05T15:18:15.618342'
+duration_seconds: 1.8891
+command_exit_code: 0
+test_runner_exit_code: 0
+test_type: integration
+verification_level: executed
+speckit_version: 0.16.0
+python_version: 3.11.9
+integration_used: agy
+status: passed

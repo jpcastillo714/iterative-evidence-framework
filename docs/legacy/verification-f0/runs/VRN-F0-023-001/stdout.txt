@@ -1,0 +1,7 @@
+{
+  "run_id": "2c4e6844",
+  "workflow_id": "minimal-workflow-real-gate",
+  "status": "completed",
+  "current_step_id": "complete",
+  "current_step_index": 2
+}

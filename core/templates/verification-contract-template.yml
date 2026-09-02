@@ -1,0 +1,131 @@
+schema_version: "1.0"
+verification_contract:
+  initiative_id: "{{INITIATIVE_ID}}"
+  increment_id: "F1.1"
+  contract_created_at: "{{CREATED_AT}}"
+  
+  claims:
+    - id: "CLM-F1.1-001"
+      statement: "El Charter de la iniciativa ha sido estructurado correctamente en initiative/charter.md sin invención de datos y con metadatos completos."
+
+  criteria:
+    - id: "CRT-F1.1-001"
+      claim_id: "CLM-F1.1-001"
+      metric: "charter_existence"
+      expected: "present"
+
+    - id: "CRT-F1.1-002"
+      claim_id: "CLM-F1.1-001"
+      metric: "purpose_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-003"
+      claim_id: "CLM-F1.1-001"
+      metric: "context_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-004"
+      claim_id: "CLM-F1.1-001"
+      metric: "outcome_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-005"
+      claim_id: "CLM-F1.1-001"
+      metric: "stakeholders_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-006"
+      claim_id: "CLM-F1.1-001"
+      metric: "constraints_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-007"
+      claim_id: "CLM-F1.1-001"
+      metric: "pending_variables_presence"
+      expected: "present"
+
+    - id: "CRT-F1.1-008"
+      claim_id: "CLM-F1.1-001"
+      metric: "initiative_id_format"
+      expected: "INI-XXX"
+
+    - id: "CRT-F1.1-009"
+      claim_id: "CLM-F1.1-001"
+      metric: "provenance_metadata"
+      expected: "complete"
+
+    - id: "CRT-F1.1-010"
+      claim_id: "CLM-F1.1-001"
+      metric: "zero_data_hallucination"
+      expected: "validated"
+
+  tests:
+    - id: "TST-F1.1-001"
+      criterion_id: "CRT-F1.1-001"
+      name: "Charter File Existence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-002"
+      criterion_id: "CRT-F1.1-002"
+      name: "Purpose Section Presence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-003"
+      criterion_id: "CRT-F1.1-003"
+      name: "Context Section Presence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-004"
+      criterion_id: "CRT-F1.1-004"
+      name: "Outcome Section Presence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-005"
+      criterion_id: "CRT-F1.1-005"
+      name: "Stakeholders Section Presence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-006"
+      criterion_id: "CRT-F1.1-006"
+      name: "Constraints Section Presence Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-007"
+      criterion_id: "CRT-F1.1-007"
+      name: "Pending Variables Section & PENDING Flag Check"
+      kind: "integration"
+      requirement: "required"
+      verification_level: "executed"
+
+    - id: "TST-F1.1-008"
+      criterion_id: "CRT-F1.1-008"
+      name: "Initiative ID Format Check (INI-XXX)"
+      kind: "static"
+      requirement: "required"
+      verification_level: "inspected"
+
+    - id: "TST-F1.1-009"
+      criterion_id: "CRT-F1.1-009"
+      name: "Provenance Metadata Block Completeness Check"
+      kind: "static"
+      requirement: "required"
+      verification_level: "inspected"
+
+    - id: "TST-F1.1-010"
+      criterion_id: "CRT-F1.1-010"
+      name: "Zero Data Invention / Anti-Hallucination Check"
+      kind: "static"
+      requirement: "required"
+      verification_level: "inspected"

@@ -1,0 +1,53 @@
+# IEF State — Schema V3 (Multi-Incremento)
+# Generado por: ief-init
+# Este archivo es la máquina de estados persistente del proyecto.
+# NO editar manualmente — usar verify_frame.py o las skills IEF.
+#
+# schema_version 3.0: Introduce soporte para múltiples incrementos coexistentes,
+# manejo de dependencias externas y nuevos estados de ciclo de vida.
+#
+# Estados del Incremento:
+# - PAUSED: Pausa voluntaria (el equipo decide detener el trabajo).
+# - BLOCKED: Pausa forzada por dependencia externa (requiere campo `blocked_by`).
+#
+# Incrementos de tipo 'exploration' usan las siguientes llaves para pasos:
+# steps:
+#   1_objective: "IN_PROGRESS"
+#   2_analysis: "PENDING"
+#   2b_data_contract: "PENDING"  # Opcional
+#   3_findings: "PENDING"
+
+schema_version: "3.0"
+
+initiative:
+  id: "{{INITIATIVE_ID}}"
+  name: "{{INITIATIVE_NAME}}"
+  preset: "{{PRESET_NAME}}"
+  created_at: "{{CREATED_AT}}"
+  updated_at: "{{UPDATED_AT}}"
+
+active_increment: "{{FIRST_INCREMENT_SLUG}}"
+
+increments:
+  - id: "001"
+    slug: "{{FIRST_INCREMENT_SLUG}}"
+    name: "{{FIRST_INCREMENT_NAME}}"
+    type: "build"  # build | exploration
+    status: "ACTIVE"  # ACTIVE | PAUSED | BLOCKED | COMPLETED | ABANDONED
+    branch: null  # Rama Git asociada (opcional)
+    current_step: 1
+    steps:
+      1_charter: "IN_PROGRESS"
+      2_empirical_inspection: "PENDING"
+      3_data_contracts: "PENDING"
+      4_business_rules: "PENDING"
+      5_acceptance_tests: "PENDING"
+      6_implementation: "PENDING"
+      7_verification: "PENDING"
+    history: []
+    # Campos para PAUSED:
+    # paused_at_step: null
+    # paused_reason: null
+    # Campos para BLOCKED:
+    # blocked_by: null
+    # blocked_reason: null

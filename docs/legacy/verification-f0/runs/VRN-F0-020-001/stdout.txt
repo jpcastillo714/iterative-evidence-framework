@@ -1,0 +1,16 @@
+{
+  "run_id": "0e39aee6",
+  "workflow_id": "minimal-workflow",
+  "status": "paused",
+  "current_step_id": "checkpoint",
+  "current_step_index": 1,
+  "gate": {
+    "step_id": "checkpoint",
+    "message": "Por favor revise el archivo charter.md antes de continuar.",
+    "options": [
+      "approve",
+      "reject"
+    ],
+    "choice": null
+  }
+}
