@@ -1,25 +1,128 @@
+##############################################################################
+# Preset `generic` — la definicion base del ciclo IEF.
+#
+# Este archivo NO es documentacion: el motor (`verify_frame.py`) lo lee y de aqui
+# saca que pasos existen, en que orden, cuales requieren aprobacion humana y donde
+# vive cada artefacto. Cambiar algo aqui cambia el comportamiento del framework.
+#
+# Los demas presets declaran `extends: generic` y solo redefinen lo que cambia.
+##############################################################################
+
 id: generic
 name: "Generic Project"
 description: "Estructura básica y genérica para proyectos de software o iniciativas estándar."
 extends: null
 
-step_aliases:
+# ─────────────────────────────────────────────────────────────────────────────
+# Rutas canonicas. Un artefacto tiene UNA ruta, y sale de aqui.
+# `{slug}` se reemplaza por el slug del incremento (ej. 003_pipeline_ingesta).
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+  increment_dir: "initiative/increments/{slug}"
+  state_file: "initiative/state.yml"
+  index_file: "initiative/increments/index.yml"
+  specs_dir: "initiative/specs"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Los ciclos de trabajo.
+#
+# Cada paso declara:
+#   key          clave en `state.yml` (no cambiarla rompe el estado existente)
+#   ref          identificador corto que escribe el usuario ("1", "2b", "7")
+#   name         etiqueta legible; los presets hijos la cambian con `rename`
+#   artifact     archivo que el paso debe producir dentro de increment_dir
+#   human_gate   true si no se puede avanzar sin aprobacion explicita del usuario
+# ─────────────────────────────────────────────────────────────────────────────
+cycles:
+
   build:
-    1_charter: "Charter"
-    2_empirical_inspection: "Inspección Empírica"
-    3_data_contracts: "Contratos de Datos"
-    4_business_rules: "Reglas de Negocio"
-    5_acceptance_tests: "Tests de Aceptación"
-    6_implementation: "Implementación"
-    7_verification: "Verificación"
+    name: "Ciclo Build"
+    steps:
+      - key: "1_charter"
+        ref: "1"
+        name: "Charter"
+        artifact: "charter.md"
+        human_gate: true
+        template: "core/templates/charter-template.md"
+        instructions: "core/steps/01_charter/step-instructions.md"
+
+      - key: "2_empirical_inspection"
+        ref: "2"
+        name: "Inspección Empírica"
+        artifact: "inspection-report.md"
+        human_gate: false
+        template: "core/steps/02_empirical_inspection/template.md"
+        instructions: "core/steps/02_empirical_inspection/step-instructions.md"
+
+      - key: "3_data_contracts"
+        ref: "3"
+        name: "Contratos de Datos"
+        artifact: "data-contract.yml"
+        human_gate: false
+        template: "core/steps/03_data_contracts/template.yml"
+        instructions: "core/steps/03_data_contracts/step-instructions.md"
+
+      - key: "4_business_rules"
+        ref: "4"
+        name: "Reglas de Negocio"
+        artifact: "business-rules.yml"
+        human_gate: true
+        template: "core/steps/04_business_rules/template.yml"
+        instructions: "core/steps/04_business_rules/step-instructions.md"
+
+      - key: "5_acceptance_tests"
+        ref: "5"
+        name: "Tests de Aceptación"
+        artifact: "acceptance-tests.yml"
+        human_gate: true
+        template: "core/steps/05_acceptance_tests/template.yml"
+        instructions: "core/steps/05_acceptance_tests/step-instructions.md"
+
+      - key: "6_implementation"
+        ref: "6"
+        name: "Implementación"
+        artifact: null
+        human_gate: false
+        instructions: "core/steps/06_implementation/step-instructions.md"
+
+      - key: "7_verification"
+        ref: "7"
+        name: "Verificación"
+        artifact: "increment-report.md"
+        human_gate: false
+        template: "core/templates/increment-report-template.md"
+        instructions: "core/steps/07_verification/step-instructions.md"
+
   exploration:
-    1_objective: "Objetivo"
-    2_analysis: "Análisis"
-    2b_data_contract: "Contrato de Datos"
-    3_findings: "Hallazgos"
+    name: "Ciclo Exploration"
+    steps:
+      - key: "1_objective"
+        ref: "1"
+        name: "Objetivo"
+        artifact: "objective.md"
+        human_gate: false
+        template: "core/templates/objective-template.md"
+        instructions: "core/steps/exploration/01_objective/step-instructions.md"
 
-human_gates: [1, 4, 5]
+      - key: "2_analysis"
+        ref: "2"
+        name: "Análisis"
+        artifact: "analysis.md"
+        human_gate: false
+        instructions: "core/steps/exploration/02_analysis/step-instructions.md"
 
-supported_increment_types:
-  - build
-  - exploration
+      - key: "2b_data_contract"
+        ref: "2b"
+        name: "Contrato de Datos"
+        artifact: "data-contract.yml"
+        human_gate: false
+        template: "core/steps/03_data_contracts/template.yml"
+        instructions: "core/steps/exploration/02b_data_contract/step-instructions.md"
+
+      - key: "3_findings"
+        ref: "3"
+        name: "Hallazgos"
+        artifact: "findings.md"
+        human_gate: false
+        template: "core/templates/findings-template.md"
+        instructions: "core/steps/exploration/03_findings/step-instructions.md"

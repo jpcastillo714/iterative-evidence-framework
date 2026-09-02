@@ -1,3 +1,11 @@
+# Preset `astro-mlops` — deteccion de anomalias sobre telemetria de instrumentacion.
+#
+# Extiende `academic`: hereda la numeracion 00-08 y el vocabulario cientifico, asi que
+# un proyecto `academic` existente lo adopta SIN mover archivos.
+#
+# Todo lo especifico de este dominio (scripts, docs, plantillas) vive dentro de esta
+# carpeta. El nucleo del IEF no sabe nada de anomalias, y eso es deliberado.
+
 id: astro-mlops
 name: "Astro MLOps / Instrumentación"
 description: >-
@@ -7,59 +15,48 @@ description: >-
   criterios de aceptación operacionales para aprendizaje no supervisado.
 extends: academic
 
-# La numeración 00-08 se hereda de `academic`: un proyecto que ya usa ese preset
-# puede migrar a este SIN mover un solo archivo.
-
-step_aliases:
+cycles:
   build:
-    1_charter: "Hipótesis y Alcance"
-    2_empirical_inspection: "Auditoría de Telemetría"
-    3_data_contracts: "Contrato de Telemetría"
-    4_business_rules: "Reglas del Detector"
-    5_acceptance_tests: "Criterios Operacionales"
-    6_implementation: "Pipeline y Experimentos"
-    7_verification: "Evaluación y Evidencia"
+    rename:
+      1_charter: "Hipótesis y Alcance"
+      2_empirical_inspection: "Auditoría de Telemetría"
+      3_data_contracts: "Contrato de Telemetría"
+      4_business_rules: "Reglas del Detector"
+      5_acceptance_tests: "Criterios Operacionales"
+      6_implementation: "Pipeline y Experimentos"
+      7_verification: "Evaluación y Evidencia"
+    # Plantillas de dominio: sustituyen a las genericas en estos tres pasos.
+    templates:
+      3_data_contracts: "presets/astro-mlops/templates/data-contract.telemetry.yml"
+      4_business_rules: "presets/astro-mlops/templates/business-rules.detector.yml"
+      5_acceptance_tests: "presets/astro-mlops/templates/acceptance-tests.anomaly.yml"
   exploration:
-    1_objective: "Pregunta de Investigación"
-    2_analysis: "Análisis Exploratorio"
-    2b_data_contract: "Formalización de Telemetría"
-    3_findings: "Hallazgos"
-
-human_gates: [1, 4, 5]
-
-supported_increment_types:
-  - build
-  - exploration
+    rename:
+      2b_data_contract: "Formalización de Telemetría"
+    templates:
+      2b_data_contract: "presets/astro-mlops/templates/data-contract.telemetry.yml"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plantillas preferidas por paso (sobrescriben las genéricas de core/steps/)
-# ─────────────────────────────────────────────────────────────────────────────
-templates:
-  3_data_contracts: "core/steps/03_data_contracts/template.telemetry.yml"
-  4_business_rules: "core/steps/04_business_rules/template.detector.yml"
-  5_acceptance_tests: "core/steps/05_acceptance_tests/template.anomaly.yml"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Herramientas ejecutables que este preset pone a disposición del agente.
-# Rutas relativas a la raíz del bundle.
+# Herramientas ejecutables que este preset pone a disposicion del agente.
+# Rutas relativas a la raiz del bundle.
 # ─────────────────────────────────────────────────────────────────────────────
 tooling:
   validate_contract:
-    script: "core/scripts/validate_data_contract.py"
+    script: "presets/astro-mlops/scripts/validate_data_contract.py"
     purpose: "Convierte el contrato de telemetría en un test ejecutable sobre los datos reales."
-    step: 3
+    step: "3_data_contracts"
   inject_faults:
-    script: "core/scripts/inject_faults.py"
+    script: "presets/astro-mlops/scripts/inject_faults.py"
     purpose: "Banco de fallas sintéticas parametrizado en unidades de sigma nominal. Genera el ground truth que la telemetría real no tiene."
-    step: 5
+    step: "5_acceptance_tests"
   eval_anomaly:
-    script: "core/scripts/eval_anomaly.py"
+    script: "presets/astro-mlops/scripts/eval_anomaly.py"
     purpose: "Evaluación por eventos, falsas alarmas por noche y lead time. Reporta point-adjust solo junto a su sesgo."
-    step: 7
+    step: "7_verification"
   evidence_run:
     script: "core/scripts/evidence_run.py"
     purpose: "Ejecuta un comando y emite la carpeta VRN de evidencia; enlaza el run de MLflow si existe."
-    step: 7
+    step: "7_verification"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Invariantes que el preset impone. Un incremento no puede violarlos sin

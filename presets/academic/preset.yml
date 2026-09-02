@@ -1,25 +1,23 @@
+# Preset `academic` — tesis, papers y metodologia cientifica.
+# Hereda el ciclo de `generic`; cambia el vocabulario al del metodo cientifico.
+
 id: academic
 name: "Academic Research"
 description: "Estructura diseñada para investigación académica, tesis, papers y metodologías científicas."
 extends: generic
 
-step_aliases:
+cycles:
   build:
-    1_charter: "Hipótesis y Alcance"
-    2_empirical_inspection: "Exploración de Datos"
-    3_data_contracts: "Esquema de Datos"
-    4_business_rules: "Reglas del Modelo"
-    5_acceptance_tests: "Criterios de Evaluación"
-    6_implementation: "Implementación"
-    7_verification: "Evaluación y Resultados"
+    rename:
+      1_charter: "Hipótesis y Alcance"
+      2_empirical_inspection: "Exploración de Datos"
+      3_data_contracts: "Esquema de Datos"
+      4_business_rules: "Reglas del Modelo"
+      5_acceptance_tests: "Criterios de Evaluación"
+      6_implementation: "Implementación"
+      7_verification: "Evaluación y Resultados"
   exploration:
-    1_objective: "Pregunta de Investigación"
-    2_analysis: "Análisis Exploratorio"
-    2b_data_contract: "Formalización de Datos"
-    3_findings: "Hallazgos"
-
-human_gates: [1, 4, 5]
-
-supported_increment_types:
-  - build
-  - exploration
+    rename:
+      1_objective: "Pregunta de Investigación"
+      2_analysis: "Análisis Exploratorio"
+      2b_data_contract: "Formalización de Datos"

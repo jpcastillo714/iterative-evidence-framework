@@ -1,25 +1,15 @@
+# Preset `engineering` — ingenieria de datos, pipelines y ETLs.
+# Hereda el ciclo completo de `generic` y solo ajusta etiquetas.
+
 id: engineering
 name: "Data Engineering"
 description: "Configuración optimizada para proyectos de ingeniería de datos, pipelines y ETLs."
 extends: generic
 
-step_aliases:
+cycles:
   build:
-    1_charter: "Charter"
-    2_empirical_inspection: "Inspección Empírica"
-    3_data_contracts: "Contratos de Datos"
-    4_business_rules: "Reglas de Negocio"
-    5_acceptance_tests: "Tests de Aceptación"
-    6_implementation: "Implementación"
-    7_verification: "Verificación"
-  exploration:
-    1_objective: "Objetivo"
-    2_analysis: "Análisis"
-    2b_data_contract: "Contrato de Datos"
-    3_findings: "Hallazgos"
-
-human_gates: [1, 4, 5]
-
-supported_increment_types:
-  - build
-  - exploration
+    rename:
+      2_empirical_inspection: "Perfilado de Fuentes"
+      3_data_contracts: "Contratos de Datos"
+      6_implementation: "Pipeline"
+      7_verification: "Verificación y Regresión"
