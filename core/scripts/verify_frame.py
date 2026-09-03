@@ -1426,7 +1426,10 @@ def main() -> None:
     p.add_argument("--reason")
     p.add_argument("--blocked-kind", choices=TIPOS_DE_BLOQUEO,
                    help="que tipo de espera: otro incremento, algo externo, o una decision")
-    p.add_argument("--blocked-on", help="slug del incremento bloqueante")
+    p.add_argument("--blocked-on",
+                   help="quien bloquea: con --blocked-kind increment, el slug del "
+                        "incremento (se valida y se detectan ciclos); con external o "
+                        "decision, texto libre y opcional (p. ej. 'equipo de BI')")
     p.add_argument("--expected", help="fecha esperada de desbloqueo (YYYY-MM-DD)")
     p.add_argument("--focus", dest="mover_foco", action="store_true",
                    help="al reactivar, mover tambien el foco a este incremento")

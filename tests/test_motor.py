@@ -84,9 +84,9 @@ def test_avanza_tras_aprobar(proyecto):
 
 def test_la_aprobacion_queda_registrada_con_autor_y_fecha(proyecto):
     marcar_paso(proyecto, "1_charter", "COMPLETED")
-    correr("--mode", "approve-step", "--project-dir", str(proyecto), "--by", "juanp")
+    correr("--mode", "approve-step", "--project-dir", str(proyecto), "--by", "tester")
     inc = leer_state(proyecto)["increments"][0]
-    assert inc["approvals"]["1_charter"]["approved_by"] == "juanp"
+    assert inc["approvals"]["1_charter"]["approved_by"] == "tester"
     assert inc["approvals"]["1_charter"]["approved_at"].endswith("+00:00"), "timestamp UTC explicito"
 
 

@@ -4,6 +4,11 @@
 > desarrollo guiado por especificaciones, con ciclos incrementales, varios frentes de
 > trabajo a la vez y reglas que se descubren trabajando.
 
+> [!NOTE]
+> **No es un fork de spec-kit ni contiene código suyo.** Es un bundle independiente que
+> interopera con él siguiendo su formato de extensiones. Sin afiliación con GitHub, Inc.
+> Detalle en [`NOTICE.md`](NOTICE.md).
+
 > [!IMPORTANT]
 > **Este directorio es el framework, no un proyecto.** Nunca se crea un `initiative/`
 > aquí dentro ni se trabaja sobre esta carpeta: el IEF se aplica a *otros* repositorios.
@@ -335,6 +340,11 @@ pytest tests/ -q
 
 ---
 
-## Licencia
+## Licencia y atribución
 
-MIT
+MIT — ver [`LICENSE`](LICENSE).
+
+Diseñado para funcionar con [spec-kit](https://github.com/github/spec-kit)
+(MIT, Copyright GitHub, Inc.). Este repositorio no incluye código de spec-kit ni está
+afiliado a GitHub, Inc.; ver [`NOTICE.md`](NOTICE.md) para el detalle de qué toma
+prestado y en qué se aparta.
