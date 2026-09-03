@@ -1,42 +1,61 @@
 ---
 name: "ief.rules"
-description: "Paso 4: Reglas de Negocio (build)"
+description: "Paso 4: Reglas (build)"
 step_number: 4
 ---
 
-# Paso 4: Reglas de Negocio (`/speckit.ief.rules`)
+# Paso 4: Reglas (`/speckit.ief.rules`)
 
-Extraer la logica de dominio a reglas con ID (`BR-001`), prioridad y estado.
-
-## Rutas
-
-El motor resuelve la ruta del artefacto desde el preset. **No inventes subcarpetas**:
-el artefacto de este paso va exactamente en
-
-```
-initiative/increments/<SLUG>/business-rules.yml
-```
-
-Consultala siempre con `python core/scripts/verify_frame.py --mode status --json`.
+> El **nombre** de este paso lo pone el preset: «Reglas de Negocio» en `product`,
+> «Reglas del Modelo» en `research`, «Definiciones y Métricas» en `analysis`. La
+> **clave** (`4_rules`) y el **archivo** (`rules.yml`) no cambian nunca. Consulta el
+> nombre real con `--mode status --json`.
 
 ## Protocolo
 
-1. Comprobar que el paso anterior este `COMPLETED` y, si tiene compuerta, `APPROVED`.
-2. Escribir el artefacto en la ruta de arriba, partiendo de la plantilla que el
-   preset declara para este paso.
-3. Verificar antes de cerrar:
-   ```bash
-   python core/scripts/verify_frame.py --mode verify-step --step 4
-   ```
-4. Marcar el paso como `COMPLETED` en `state.yml`.
+1. Verificar que el paso 3 esté `COMPLETED`.
+2. Extraer las reglas de lo que descubriste en los pasos 2 y 3. **No inventes reglas
+   plausibles**: una regla que no salió de los datos ni de una decisión del usuario es
+   una suposición disfrazada de norma.
+3. Escribir `rules.yml` con el esquema de `core/steps/04_rules/template.yml`.
+4. Comprobar contra `initiative/specs/constitution.md` y contra las reglas ya vigentes
+   en `initiative/specs/rules.yml`.
+5. **Human Gate**: pedir aprobación explícita.
 
-   **Compuerta humana.** Pedir aprobacion explicita al usuario y, solo si aprueba:
-   ```bash
-   python core/scripts/verify_frame.py --mode approve-step --by "<usuario>"
-   ```
-   El motor NO deja avanzar sin esto, y la CI lo comprueba con `--mode check-gates`.
+## Cada regla lleva tres cosas
 
-5. Avanzar:
-   ```bash
-   python core/scripts/verify_frame.py --mode advance
-   ```
+```yaml
+- id: RUL-003-001
+  statement: "Un pedido sin cliente se asigna al cliente generico"   # normativo y verificable
+  rationale: "Descartarlos perdia 3% de facturacion real: eran ventas de mostrador"
+  applies_to: "pedidos.validacion"                                    # lo que gobierna
+```
+
+- **`statement`** debe poder verificarse. Si no puedes decir qué test lo comprobaría,
+  la regla está mal formulada.
+- **`rationale`** es lo que antes sería una bitácora de decisiones aparte. Va dentro
+  porque separada se desincroniza siempre.
+- **`applies_to`** es lo que permite al motor detectar que dos incrementos se
+  contradicen. Sin él, la contradicción se cuela en silencio.
+
+## Si contradice una regla vigente
+
+Lee `initiative/specs/rules.yml`. Si tu regla gobierna el mismo `applies_to` que una
+activa:
+
+- **La reemplaza** → declara `supersedes: RUL-XXX-YYY` y explica en el `rationale` qué
+  aprendiste que la vieja no sabía.
+- **No la reemplaza** → entonces se contradicen, y hay que decidir cuál rige antes de
+  seguir.
+
+Sin `supersedes`, `--mode merge-increment` **detiene la promoción**.
+
+## Decisiones abiertas
+
+Lo que no se decide va a `decisiones_pendientes` y **se resuelve en la compuerta**. Una
+decisión aplazada hasta la implementación la termina tomando el código, en silencio y
+sin que nadie la haya aprobado.
+
+## Referencias
+
+`core/steps/04_rules/step-instructions.md` — el protocolo completo.

@@ -101,11 +101,11 @@ def sembrar_artefactos(project: Path) -> None:
     (inc / "data-contract.yml").write_text(yaml.safe_dump({
         "schemas": [{"name": "t", "fields": [{"name": "ts", "type": "datetime"}]}]
     }), encoding="utf-8")
-    (inc / "business-rules.yml").write_text(yaml.safe_dump({
-        "rules": [{"id": "BR-001", "description": "Regla de prueba",
+    (inc / "rules.yml").write_text(yaml.safe_dump({
+        "rules": [{"id": "RUL-001-001", "description": "Regla de prueba",
                    "priority": "high", "status": "approved"}]
     }), encoding="utf-8")
     (inc / "acceptance-tests.yml").write_text(yaml.safe_dump({
-        "tests": [{"test_id": "TST-ACC-001", "linked_rule": "BR-001",
+        "tests": [{"test_id": "TST-ACC-001", "linked_rule": "RUL-001-001",
                    "given": "g", "when": "w", "then": "t"}]
     }), encoding="utf-8")

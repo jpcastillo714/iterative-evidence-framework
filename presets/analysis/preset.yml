@@ -1,0 +1,42 @@
+# Preset `analysis` — responder preguntas con datos.
+#
+# Absorbe lo que antes era `data-science`. El producto es una respuesta defendible,
+# no un sistema: muchos analisis cortos, la mayoria descartados, y un puñado que se
+# convierten en un reporte que alguien lee para decidir algo.
+#
+# Solo dos compuertas: la pregunta y los criterios de validez. Un analisis que no
+# construye nada permanente no necesita aprobar su implementacion.
+
+id: analysis
+name: "Analisis de Datos"
+description: >-
+  Analisis exploratorio, modelado estadistico y respuestas a preguntas de negocio.
+  El entregable es un hallazgo con su evidencia.
+extends: generic
+
+roles:
+  - referencias
+  - exploracion        # notebooks: el 80% se descarta y esta bien
+  - datos_raw
+  - datos_interim
+  - datos_processed
+  - resultados
+  - avances            # reportes cortos y frecuentes
+  - presentaciones
+
+cycles:
+  build:
+    human_gates: [1_charter, 5_acceptance_tests]
+    rename:
+      1_charter: "Pregunta y Alcance"
+      2_empirical_inspection: "Perfilado de Datos"
+      3_data_contracts: "Esquema y Supuestos"
+      4_rules: "Definiciones y Metricas"
+      5_acceptance_tests: "Criterios de Validez"
+      6_implementation: "Analisis"
+      7_verification: "Hallazgos y Evidencia"
+  exploration:
+    rename:
+      1_objective: "Pregunta Exploratoria"
+      2_analysis: "Analisis Exploratorio"
+      2b_data_contract: "Formalizacion del Esquema"

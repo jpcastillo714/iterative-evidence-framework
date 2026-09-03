@@ -11,6 +11,26 @@ step_number: null
 Prepara la estructura de directorios, el estado persistente y las reglas del agente.
 La estructura **la decide el preset**, no este comando.
 
+## Dos decisiones, no una
+
+`init` fija los dos ejes que se eligen una vez por proyecto:
+
+```bash
+python core/scripts/verify_frame.py --mode init     --preset analysis --layout numbered --initiative-name "Mi proyecto"
+```
+
+| Eje | Opciones | Qué decide |
+|---|---|---|
+| `--preset` | `generic` `research` `product` `analysis` (+ mixin `modeling`) | Vocabulario y ceremonia |
+| `--layout` | `flat` `numbered` | Cómo se llaman las carpetas |
+
+Son **independientes**: un proyecto de análisis puede usar carpetas numeradas y una
+tesis puede usar `src/`. El layout es cuestión de herramientas y gusto, no de tipo de
+trabajo.
+
+El tercer eje —cuánto rigor lleva cada trabajo— **no se decide aquí**: se elige en cada
+incremento con `--type build | exploration | prototype`.
+
 ## Protocolo
 
 1. Elegir el preset con el usuario. Ver los disponibles y su ciclo:
@@ -50,3 +70,14 @@ La estructura **la decide el preset**, no este comando.
 
 - Existe `initiative/state.yml` con `schema_version: "3.1"` y la lista de incrementos vacia.
 - Existen los directorios que declara el preset elegido.
+
+
+## Después de init
+
+1. **Escribe la constitución.** `init` la crea desde plantilla en
+   `initiative/specs/constitution.md`, vacía. Son los principios bajo los que vas a
+   trabajar, y las reglas que descubras vivirán debajo de ellos.
+2. **Abre el primer incremento** con el ciclo que pida el trabajo:
+   ```bash
+   python core/scripts/verify_frame.py --mode new-increment --type build --name "..."
+   ```

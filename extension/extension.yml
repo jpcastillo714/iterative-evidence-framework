@@ -2,7 +2,7 @@ schema_version: '3.1'
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: 0.6.0
+  version: 0.7.0
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
@@ -76,3 +76,23 @@ provides:
     - ief.next
     description: Avanza al siguiente paso del incremento activo
     file: commands/ief.next.md
+  - name: speckit.ief.prototype
+    aliases:
+    - ief.prototype
+    description: Abre un incremento de ciclo corto (4 pasos, 1 compuerta)
+    file: commands/ief.prototype.md
+  - name: speckit.ief.focus
+    aliases:
+    - ief.focus
+    description: Cambia a que incremento apuntan los comandos
+    file: commands/ief.focus.md
+  - name: speckit.ief.doctor
+    aliases:
+    - ief.doctor
+    description: Diagnostica bloqueos, conflictos y olvidos del proyecto
+    file: commands/ief.doctor.md
+  - name: speckit.ief.constitution
+    aliases:
+    - ief.constitution
+    description: Escribe o revisa los principios del proyecto
+    file: commands/ief.constitution.md

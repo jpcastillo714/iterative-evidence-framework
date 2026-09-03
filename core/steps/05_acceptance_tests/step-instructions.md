@@ -6,7 +6,7 @@
 |-------|-------|
 | **Paso** | 5 — Tests de Aceptación |
 | **Tipo de Incremento** | `build` |
-| **Inputs obligatorios** | `initiative/increments/<SLUG>/business-rules.yml`, `initiative/increments/<SLUG>/data-contract.yml` |
+| **Inputs obligatorios** | `initiative/increments/<SLUG>/rules.yml`, `initiative/increments/<SLUG>/data-contract.yml` |
 | **Output** | `initiative/increments/<SLUG>/acceptance-tests.yml` |
 | **Human Gate** | ✅ Sí — REQUIERE aprobación del usuario antes de avanzar al Paso 6 |
 | **Protocolo si algo no cuadra** | Si los tests no cubren una regla, volver a revisarlos. Cada test debe referenciar un BR-NNN. |
@@ -19,7 +19,7 @@ El objetivo principal de este paso es traducir cada regla de negocio definida en
 
 ## Contexto
 
-**Prerrequisito:** El Paso 4 (Business Rules / Reglas de Negocio) debe estar COMPLETADO. Las reglas de negocio aprobadas son la materia prima de este paso.
+**Prerrequisito:** El Paso 4 (Business Rules / Reglas) debe estar COMPLETADO. Las reglas de negocio aprobadas son la materia prima de este paso.
 **Impacto:** El trabajo realizado aquí alimenta directamente el Paso 6 (Implementación) como guía de desarrollo y el Paso 7 (Verificación) como criterio de aceptación final. Sin pruebas de aceptación sólidas, no hay forma de validar que la implementación sea correcta.
 
 ## Reglas Críticas
@@ -28,9 +28,9 @@ El objetivo principal de este paso es traducir cada regla de negocio definida en
 
 
 4. **Gate Humano Obligatorio:** Presenta los tests al usuario para revisión. El usuario debe confirmar que los criterios de aceptación capturan correctamente el comportamiento esperado.
-5. **Trazabilidad estricta:** Cada test DEBE referenciar una regla de negocio por ID (ej. linked_rule: BR-001). Tests sin trazabilidad son inválidos.
+5. **Trazabilidad estricta:** Cada test DEBE referenciar una regla de negocio por ID (ej. linked_rule: RUL-001-001). Tests sin trazabilidad son inválidos.
 
-1. **Cobertura Total (1:1 o más):** Cada regla de negocio (`BR-XXX`) DEBE tener al menos una prueba de aceptación asociada (`TST-ACC-XXX`). No pueden existir reglas huérfanas sin pruebas.
+1. **Cobertura Total (1:1 o más):** Cada regla de negocio (`RUL-NNN-XXX`) DEBE tener al menos una prueba de aceptación asociada (`TST-ACC-XXX`). No pueden existir reglas huérfanas sin pruebas.
 2. **Naturaleza Ejecutable:** Las pruebas deben ser diseñadas de forma que sean EJECUTABLES. Esto significa que pueden ser automatizadas mediante un script (ej. pytest) o pueden ser ejecutadas por un humano, pero en ambos casos los criterios de aprobación/falla (pass/fail) deben ser inequívocos.
 3. **Formato Obligatorio (Given/When/Then):**
    - **Given (Dado):** Establece las precondiciones, el estado inicial del sistema o los datos de entrada.
@@ -42,10 +42,10 @@ El objetivo principal de este paso es traducir cada regla de negocio definida en
 ## Protocolo Detallado (Paso a Paso)
 
 1. **Lectura y Análisis de Insumos:**
-   Comienza leyendo exhaustivamente el archivo `business-rules.yml` generado en el Paso 4, así como los esquemas definidos en los contratos de datos del Paso 3.
+   Comienza leyendo exhaustivamente el archivo `rules.yml` generado en el Paso 4, así como los esquemas definidos en los contratos de datos del Paso 3.
 
 2. **Mapeo y Generación de Pruebas:**
-   Por cada regla de negocio identificada (`BR-XXX`), redacta al menos una prueba de aceptación (`TST-ACC-XXX`). Si una regla es compleja, divídela en múltiples pruebas para abordar diferentes escenarios.
+   Por cada regla de negocio identificada (`RUL-NNN-XXX`), redacta al menos una prueba de aceptación (`TST-ACC-XXX`). Si una regla es compleja, divídela en múltiples pruebas para abordar diferentes escenarios.
 
 3. **Redacción en Formato BDD:**
    Utiliza el formato Given/When/Then para estructurar la prueba. Es vital emplear valores concretos y realistas en la medida de lo posible, en lugar de abstracciones genéricas.
@@ -89,7 +89,7 @@ El resultado de este paso debe ser almacenado en:
 
 ```yaml
 - id: TST-ACC-001
-  linked_rule: BR-001
+  linked_rule: RUL-001-001
   scenario: "Pedido con descuento aplicado correctamente"
   given: "Un pedido con subtotal $10,000 y un cupón válido del 10% de descuento (campo 'discount_rate')"
   when: "Se calcula el total del pedido mediante el servicio de facturación"

@@ -49,7 +49,7 @@ bloque `verify` para que el compilador lo convierta en un test real:
 ```yaml
 tests:
   - test_id: TST-ACC-001
-    linked_rule: BR-001
+    linked_rule: RUL-001-001
     given: "el banco de fallas inyectadas"
     when: "se evalua a severidad 4 sigma"
     then: "el recall por evento supera 0.80"

@@ -17,6 +17,16 @@ extends: null
 # Rutas canonicas. Un artefacto tiene UNA ruta, y sale de aqui.
 # `{slug}` se reemplaza por el slug del incremento (ej. 003_pipeline_ingesta).
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Roles que este preset necesita. Un rol es una necesidad, no una ruta: el layout
+# del proyecto (core/layouts.yml) decide si `codigo` es `src/` o `04_codigo/src/`.
+# Los presets hijos AÑADEN roles; no redeclaran esta lista.
+# ─────────────────────────────────────────────────────────────────────────────
+roles:
+  - codigo
+  - tests
+  - scratch
+
 paths:
   increment_dir: "initiative/increments/{slug}"
   state_file: "initiative/state.yml"
@@ -62,17 +72,17 @@ cycles:
         template: "core/steps/03_data_contracts/template.yml"
         instructions: "core/steps/03_data_contracts/step-instructions.md"
 
-      - key: "4_business_rules"
+      - key: "4_rules"
         ref: "4"
-        name: "Reglas de Negocio"
-        artifact: "business-rules.yml"
+        name: "Reglas"
+        artifact: "rules.yml"
         human_gate: true
-        template: "core/steps/04_business_rules/template.yml"
-        instructions: "core/steps/04_business_rules/step-instructions.md"
+        template: "core/steps/04_rules/template.yml"
+        instructions: "core/steps/04_rules/step-instructions.md"
 
       - key: "5_acceptance_tests"
         ref: "5"
-        name: "Tests de Aceptación"
+        name: "Criterios de Aceptación"
         artifact: "acceptance-tests.yml"
         human_gate: true
         template: "core/steps/05_acceptance_tests/template.yml"
@@ -126,3 +136,47 @@ cycles:
         human_gate: false
         template: "core/templates/findings-template.md"
         instructions: "core/steps/exploration/03_findings/step-instructions.md"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Ciclo `prototype` — para descubrir si algo vale la pena antes de construirlo.
+  #
+  # Existe porque el rigor es una propiedad del TRABAJO, no del proyecto. Un
+  # proyecto serio abre un incremento prototype cuando la pregunta es "¿esto
+  # funciona?" y uno build cuando ya es "esto tiene que aguantar".
+  #
+  # Recorta a cuatro pasos y una compuerta. Lo importante es que el recorte queda
+  # DECLARADO: los pasos que no estan, no estan, en vez de fingirse completados.
+  # ───────────────────────────────────────────────────────────────────────────
+  prototype:
+    name: "Ciclo Prototype"
+    steps:
+      - key: "1_charter"
+        ref: "1"
+        name: "Hipótesis y Criterio de Éxito"
+        artifact: "charter.md"
+        human_gate: true
+        template: "core/templates/charter-template.md"
+        instructions: "core/steps/01_charter/step-instructions.md"
+
+      - key: "5_acceptance_tests"
+        ref: "2"
+        name: "Cómo Sabremos Si Funciona"
+        artifact: "acceptance-tests.yml"
+        human_gate: false
+        template: "core/steps/05_acceptance_tests/template.yml"
+        instructions: "core/steps/05_acceptance_tests/step-instructions.md"
+
+      - key: "6_implementation"
+        ref: "3"
+        name: "Construir"
+        artifact: null
+        human_gate: false
+        instructions: "core/steps/06_implementation/step-instructions.md"
+
+      - key: "7_verification"
+        ref: "4"
+        name: "Aprender y Decidir"
+        artifact: "increment-report.md"
+        human_gate: false
+        template: "core/templates/increment-report-template.md"
+        instructions: "core/steps/07_verification/step-instructions.md"

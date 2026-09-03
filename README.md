@@ -1,8 +1,8 @@
 # Iterative Evidence Framework (IEF)
 
-> Extensión de [spec-kit](https://github.com/github/spec-kit): mismo espíritu de
-> desarrollo guiado por especificaciones, con ciclos incrementales, presets configurables
-> y criterios de aceptación que se ejecutan.
+> Extensión de [spec-kit](https://github.com/github/spec-kit): el mismo espíritu de
+> desarrollo guiado por especificaciones, con ciclos incrementales, varios frentes de
+> trabajo a la vez y reglas que se descubren trabajando.
 
 > [!IMPORTANT]
 > **Este directorio es el framework, no un proyecto.** Nunca se crea un `initiative/`
@@ -11,16 +11,32 @@
 
 ---
 
+## Los tres ejes
+
+El error que este diseño corrige es haber tratado como «tipo de proyecto» tres cosas que
+son independientes. Ahora se eligen por separado:
+
+| Eje | Decide | Se elige | Opciones |
+|---|---|---|---|
+| **Layout** | Cómo se llaman las carpetas | al iniciar el proyecto | `flat` · `numbered` |
+| **Preset** | Vocabulario y ceremonia | al iniciar el proyecto | `generic` `research` `product` `analysis` + mixin `modeling` |
+| **Ciclo** | Cuánto rigor lleva *este* trabajo | **en cada incremento** | `exploration` · `prototype` · `build` |
+
+Un MVP no es un tipo de proyecto: es un **incremento** `prototype` que cualquier
+proyecto abre cuando lo necesita. Y las presentaciones no son «de proyectos
+académicos»: son un **rol** que casi todos usan.
+
+---
+
 ## Qué añade sobre spec-kit
 
 | | |
 |---|---|
-| **El ciclo lo define el preset** | Qué pasos existen, en qué orden, cuáles requieren aprobación humana y dónde vive cada artefacto sale de `presets/<id>/preset.yml`. Un preset quita pasos, agrega pasos o mueve una compuerta **sin tocar código**. |
-| **Criterios ejecutables** | `acceptance-tests.yml` se compila a pytest. Un criterio sin forma de verificarse **falla**; no se aprueba por omisión. |
-| **Compuertas mecánicas** | `check-gates` sale con código 1 si un paso con compuerta quedó terminado sin aprobación. Es una condición de merge, no un recordatorio. |
-| **Especificación viva** | `merge-increment` promueve las reglas del incremento a `initiative/specs/`, con la procedencia de cada una. Sin esto, cada incremento acumula su copia y nadie sabe cuál rige. |
-| **Multi-incremento** | Varios frentes coexisten: `ACTIVE`, `PAUSED`, `BLOCKED`, `COMPLETED`, `MERGED`, `ABANDONED`. |
-| **Retroceso con motivo** | `rewind` marca pasos como `NEEDS_REVISION`, revoca sus aprobaciones y registra por qué. |
+| **Reglas de abajo arriba** | spec-kit escribe la constitución al principio. El IEF además **descubre reglas trabajando** y las promueve al proyecto, con detección de conflictos. |
+| **El ciclo lo define el preset** | Qué pasos hay, cuáles llevan compuerta y dónde vive cada artefacto sale de `presets/<id>/preset.yml`. Un mixin inyecta un paso **sin tocar código**. |
+| **Criterios ejecutables** | `acceptance-tests.yml` se compila a pytest. Un criterio sin forma de verificarse **falla**. |
+| **Compuertas mecánicas** | `check-gates` sale con código 1 si un paso con compuerta quedó sin aprobar. Es condición de merge, no un recordatorio. |
+| **Varios frentes a la vez** | `ACTIVE` (varios) y `focus` (uno) son cosas distintas, con bloqueos tipados y diagnóstico. |
 
 ---
 
@@ -32,7 +48,7 @@ python core/scripts/verify_frame.py --mode check-bundle
 pytest tests/ -q
 ```
 
-El núcleo solo necesita `PyYAML`. `requirements.txt` es el mínimo; el `-dev` añade pytest.
+El núcleo solo necesita `PyYAML`.
 
 ---
 
@@ -44,59 +60,167 @@ Siempre desde el directorio del **proyecto**, no desde aquí:
 IEF=/ruta/al/spec-kit_bundle/core/scripts
 cd /ruta/de/mi/proyecto
 
-# 1. Inicializar: crea los directorios del preset, state.yml y initiative/specs/
-python $IEF/verify_frame.py --mode init --preset data-science --initiative-name "Mi proyecto"
+# 1. Iniciar: preset y layout son decisiones separadas
+python $IEF/verify_frame.py --mode init --preset analysis --layout numbered \
+    --initiative-name "Mi proyecto"
 
-# 2. Ver el estado (--json para consumo programático)
-python $IEF/verify_frame.py --mode status
+# 2. Escribir la constitución antes del primer incremento
+$EDITOR initiative/specs/constitution.md
 
-# 3. Trabajar el paso, verificarlo y avanzar
+# 3. Abrir un frente de trabajo, con el rigor que pida
+python $IEF/verify_frame.py --mode new-increment --type build --name "Ingesta de ventas"
+
+# 4. Trabajar el paso, verificarlo, aprobarlo si lleva compuerta, avanzar
 python $IEF/verify_frame.py --mode verify-step
-python $IEF/verify_frame.py --mode approve-step --by "yo"     # si hay compuerta
+python $IEF/verify_frame.py --mode approve-step --by "yo"
 python $IEF/verify_frame.py --mode advance
 
-# 4. Compilar y ejecutar los criterios de aceptación
-python $IEF/compile_acceptance_tests.py --increment 001_mi_incremento
+# 5. Compilar y ejecutar los criterios de aceptación
+python $IEF/compile_acceptance_tests.py --increment 001_ingesta_de_ventas
 pytest tests/generated -v
 
-# 5. Cerrar y consolidar
+# 6. Cerrar y promover sus reglas al proyecto
 python $IEF/verify_frame.py --mode check-gates
-python $IEF/verify_frame.py --mode merge-increment --increment 001_mi_incremento
+python $IEF/verify_frame.py --mode merge-increment --increment 001_ingesta_de_ventas
+
+# En cualquier momento: qué está mal
+python $IEF/verify_frame.py --mode doctor
 ```
 
-Con un agente: `/speckit.ief.init`, `/speckit.ief.status`, `/speckit.ief.next`, etc.
+---
+
+## Varios frentes de trabajo
+
+**Sí puedes tener dos incrementos activos.** Lo que hay que separar es *tener trabajo en
+curso* de *dónde estás ahora*:
+
+| | Significa | Cuántos |
+|---|---|---|
+| `status: ACTIVE` | Este frente tiene trabajo en curso | **varios** |
+| `focus` | A cuál apuntan los comandos sin `--increment` | **uno** |
+
+```bash
+python $IEF/verify_frame.py --mode focus                          # ver
+python $IEF/verify_frame.py --mode focus --increment 002_panel    # mover
+```
+
+### Pausar y bloquear no es lo mismo
+
+| Estado | Significa | Quién lo saca de ahí |
+|---|---|---|
+| `PAUSED` | **Tú** decidiste parar; cambió la prioridad | Tú, cuando quieras |
+| `BLOCKED` | **Algo externo** impide avanzar | El bloqueante, al resolverse |
+
+Un bloqueo declara de qué tipo es, y eso permite diagnosticarlo:
+
+```bash
+# Dependo de que otro equipo me pase datos
+python $IEF/verify_frame.py --mode set-status --increment 001_ingesta --status BLOCKED \
+    --blocked-kind external --reason "esperando extracto de BI" --expected 2026-09-20
+
+# Abro otro frente y sigo trabajando
+python $IEF/verify_frame.py --mode new-increment --type prototype --name "Panel de calidad"
+
+# Llegan los datos: reanudo y recupero el foco
+python $IEF/verify_frame.py --mode set-status --increment 001_ingesta --status ACTIVE --focus
+```
+
+En ese último paso el motor compara contra qué reglas se abrió el incremento y avisa si
+el mundo cambió mientras estabas en otra cosa:
+
+```
+  [!] Las reglas del proyecto cambiaron desde que abriste este incremento.
+        ~ RUL-001-003    Un pedido sin cliente se descarta
+        + RUL-004-001    Un pedido sin cliente va al cliente generico
+      Revisa charter.md y data-contract.yml antes de seguir.
+```
+
+`--blocked-kind increment` valida que el bloqueante exista y **rechaza dependencias
+circulares**. `--mode doctor` avisa de bloqueos vencidos, frentes de más y reglas sin
+promover.
+
+---
+
+## Reglas: de un incremento al proyecto
+
+Dos capas, con direcciones opuestas y ambas necesarias:
+
+| | **Constitución** | **Reglas promovidas** |
+|---|---|---|
+| Describe | **Cómo se trabaja** | **Qué es cierto del dominio** |
+| Ejemplo | «Ninguna cifra sin evidencia ejecutable» | «Un episodio dura ≥ 5 min» |
+| Nace | Al inicio, de una vez | En el paso 4 de un incremento |
+| Dirección | Arriba→abajo (como spec-kit) | **Abajo→arriba (aporte del IEF)** |
+
+Una regla tiene tres vidas:
+
+```
+   PASO 4 del incremento          merge-increment           incremento posterior
+  ┌────────────────────┐        ┌──────────────────┐      ┌──────────────────┐
+  │  proposed          │ ─────► │   active         │ ───► │   superseded     │
+  │  scope: increment  │        │  scope: project  │      │  apunta a la que │
+  │  rige solo aquí    │        │  rige todo       │      │  la reemplaza    │
+  └────────────────────┘        └──────────────────┘      └──────────────────┘
+```
+
+```yaml
+rules:
+  - id: RUL-003-001            # la procedencia va en el id
+    statement: "Un pedido sin cliente se asigna al cliente genérico"
+    rationale: "Descartarlos perdía 3% de facturación real: eran ventas de mostrador"
+    evidence: [TST-ACC-014]
+    applies_to: "pedidos.validacion"    # lo que el motor compara para detectar choques
+    scope: increment
+    status: proposed
+    supersedes: RUL-001-004             # obligatorio si contradice una regla vigente
+```
+
+Si dos incrementos promueven reglas sobre el mismo `applies_to` sin declarar
+`supersedes`, **la promoción se detiene**:
+
+```
+[CONFLICTO] La promocion se detiene. Sin esto, dos reglas
+            contradictorias convivirian sin que nadie lo notara.
+
+  - RUL-002-001 gobierna `pedidos.validacion`, que ya rige RUL-001-001.
+    Declara `supersedes: RUL-001-001` si la reemplaza.
+```
+
+La regla superada **no se borra**: queda marcada apuntando a la nueva. El proyecto
+necesita recordar que un día pensó lo contrario, y por qué.
 
 ---
 
 ## Presets
 
-| Preset | Extiende | Ciclo build | Para qué |
-|---|---|---|---|
-| `generic` | — | 7 pasos, compuertas 1·4·5 | Base. Cualquier proyecto de software. |
-| `engineering` | `generic` | 7 pasos | Pipelines, ETL, ingeniería de datos. |
-| `data-science` | `generic` | 7 pasos | Análisis y respuestas a partir de datos. |
-| `ml` | `generic` | **8 pasos**, compuertas 1·4·5·6b | Modelos. Añade *Evaluación del Modelo* con model card. |
-| `mvp` | `generic` | **4 pasos**, 1 compuerta | Prototipos. Cambia rigor por velocidad, declarándolo. |
-| `academic` | `generic` | 7 pasos | Tesis y papers. Numeración `00_admin` … `08_presentaciones`. |
+| Preset | Vocabulario del paso 4 | Roles que añade |
+|---|---|---|
+| `generic` | «Reglas» | núcleo mínimo |
+| `research` | «Reglas del Modelo» | referencias, documento, presentaciones, avances, admin |
+| `product` | «Reglas de Negocio» | pipelines, despliegue, onboarding, config |
+| `analysis` | «Definiciones y Métricas» | exploración, resultados, avances |
+| `modeling` *(mixin)* | añade el paso 6b con compuerta | modelos, experimentos, config |
 
-Que `ml` tenga 8 pasos y `mvp` tenga 4 no requirió tocar el motor: está en sus
-`preset.yml`.
+`modeling` se **compone** con cualquier base, que es lo que la herencia simple no
+permitía:
 
-### Crear o ajustar un preset
+```yaml
+extends: [analysis, modeling]     # análisis que entrena modelos
+extends: [product, modeling]      # sistema con un modelo dentro
+```
 
-Tres niveles, de menos a más invasivo:
+### Personalizar un ciclo
 
 ```yaml
 extends: generic
 cycles:
   build:
-    rename:      {2_empirical_inspection: "Perfilado de Fuentes"}   # solo la etiqueta
-    human_gates: [1_charter, 5_acceptance_tests]                    # mueve las compuertas
-    steps:       [...]                                              # reemplaza el ciclo
+    rename:        {4_rules: "Definiciones"}          # solo la etiqueta
+    human_gates:   [1_charter, 5_acceptance_tests]    # mueve las compuertas
+    remove:        [3_data_contracts]                 # quita pasos
+    insert_after:  {6_implementation: [ {...} ]}      # inserta sin redeclarar el ciclo
+    steps:         [...]                             # reemplaza el ciclo entero
 ```
-
-Un preset trae lo suyo en su carpeta: `preset.yml`, `directory-convention.yml`,
-`agents-fragment.md`, y si necesita scripts, en `presets/<id>/scripts/`. Validar:
 
 ```bash
 python core/scripts/verify_frame.py --mode check-preset --preset mi-preset
@@ -104,39 +228,67 @@ python core/scripts/verify_frame.py --mode check-preset --preset mi-preset
 
 ---
 
-## El ciclo base
+## Roles y layouts
 
-### Build — construir algo verificable
+Un **rol** es una necesidad («un sitio para las presentaciones»); el **layout** la
+convierte en una ruta. El catálogo de roles es único porque un estudiante de memoria, un
+ingeniero de datos y un analista acumulan casi lo mismo: lo que cambia entre ellos es el
+vocabulario, no las carpetas.
+
+```
+rol              numbered               flat
+────────────────────────────────────────────────────────
+admin         →  00_admin/           |  admin/
+onboarding    →  01_inicio/          |  docs/onboarding/
+referencias   →  02_referencias/     |  references/
+metodologia   →  03_metodologia/     |  docs/method/
+codigo        →  04_codigo/src       |  src/
+datos_raw     →  05_datos/raw        |  data/raw/
+resultados    →  06_resultados/...   |  reports/figures/
+documento     →  07_documento/       |  docs/
+presentaciones→  08_presentaciones/  |  presentations/
+avances       →  09_avances/         |  reports/progress/
+```
+
+`avances` (muchos reportes cortos) y `documento` (el entregable largo) son roles
+**distintos** a propósito: distinta cadencia, distinta audiencia. Catálogo completo en
+[`core/roles.yml`](core/roles.yml) y [`core/layouts.yml`](core/layouts.yml).
+
+---
+
+## Los tres ciclos
+
+### `exploration` — investigar antes de construir
+`objective.md` → análisis → *(contrato opcional)* → `findings.md`. Sin compuertas.
+
+### `prototype` — descubrir si algo vale la pena
+Cuatro pasos, una compuerta: hipótesis y criterio de éxito → cómo sabremos si funciona →
+construir → aprender y decidir. Los pasos que se saltan **no están**, en vez de fingirse
+completados.
+
+### `build` — construir algo que tiene que aguantar
 
 | Paso | Artefacto | Compuerta |
 |---|---|---|
 | 1. Charter | `charter.md` | ✋ |
 | 2. Inspección Empírica | `inspection-report.md` | |
 | 3. Contratos de Datos | `data-contract.yml` | |
-| 4. Reglas de Negocio | `business-rules.yml` | ✋ |
+| 4. Reglas | `rules.yml` | ✋ |
 | 5. Criterios de Aceptación | `acceptance-tests.yml` | ✋ |
 | 6. Implementación | *(código)* | |
 | 7. Verificación | `increment-report.md` | |
 
-Todo en `initiative/increments/<SLUG>/`. **Una ruta por artefacto**, declarada en el
-preset y consultable con `--mode status --json`.
-
-### Exploration — investigar antes de construir
-
-`objective.md` → análisis → *(contrato opcional)* → `findings.md`. Sin compuertas: su
-producto es conocimiento, y alimenta un futuro Charter.
+**Una ruta por artefacto**, declarada en el preset y consultable con
+`--mode status --json`.
 
 ---
 
 ## Criterios que se ejecutan
 
-Un `given/when/then` en prosa es una intención. Con un bloque `verify`, el compilador lo
-convierte en un test real:
-
 ```yaml
 tests:
   - test_id: TST-ACC-001
-    linked_rule: BR-001
+    linked_rule: RUL-001-001
     given: "el conjunto de validación"
     when: "se evalúa el modelo"
     then: "el F1 macro supera 0.80"
@@ -148,9 +300,8 @@ tests:
       value: 0.80
 ```
 
-- Sin `verify` → el test **falla** con un mensaje que lo explica.
-- `status: blocked` + `blocked_reason` → se salta, declarando por qué no se puede medir.
-- `--check` detecta que el YAML cambió y los tests generados quedaron obsoletos.
+Sin `verify` el test **falla** con un mensaje que lo explica. `status: blocked` +
+`blocked_reason` lo salta declarando por qué no se puede medir.
 
 ---
 
@@ -158,13 +309,14 @@ tests:
 
 ```
 core/
-  scripts/verify_frame.py             estado, compuertas, avance, merge
-  scripts/ief_preset.py               carga de presets con herencia
+  roles.yml                           qué acumula un proyecto
+  layouts.yml                         cómo se llaman esas carpetas
+  scripts/verify_frame.py             estado, foco, compuertas, merge, doctor
+  scripts/ief_preset.py               presets, herencia múltiple, roles
   scripts/compile_acceptance_tests.py YAML -> pytest
-  steps/                              instrucciones y plantillas de cada paso
-  templates/                          plantillas de artefacto
+  steps/ · templates/                 instrucciones y plantillas
 extension/commands/                   los comandos /speckit.ief.*
-presets/<id>/                         ciclo, directorios y lo propio de cada tipo de trabajo
+presets/<id>/                         ciclo, vocabulario y roles
 tests/                                suite del framework
 ```
 
@@ -175,9 +327,9 @@ tests/                                suite del framework
 ## Verificación
 
 ```bash
-python core/scripts/verify_frame.py --mode check-bundle    # estructura
-python core/scripts/verify_frame.py --mode check-preset    # presets y sus rutas
-python core/scripts/verify_frame.py --mode check-steps     # archivos de cada paso
+python core/scripts/verify_frame.py --mode check-bundle
+python core/scripts/verify_frame.py --mode check-preset
+python core/scripts/verify_frame.py --mode check-steps
 pytest tests/ -q
 ```
 

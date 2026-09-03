@@ -21,7 +21,7 @@ Al operar en este proyecto, todos los agentes deben adherirse estrictamente a la
 
 ## 3. Tipos de Incremento y Estados
 * **Tipos:**
-  - `build`: 7 pasos (1_charter, 2_empirical_inspection, 3_data_contracts, 4_business_rules, 5_acceptance_tests, 6_implementation, 7_verification).
+  - `build`: 7 pasos (1_charter, 2_empirical_inspection, 3_data_contracts, 4_rules, 5_acceptance_tests, 6_implementation, 7_verification).
   - `exploration`: 3-4 pasos (1_objective, 2_analysis, 2b_data_contract opcional, 3_findings).
 * **Estados de Incremento:** ACTIVE, PAUSED, BLOCKED, COMPLETED, ABANDONED.
 * **Estados de Paso:** PENDING, IN_PROGRESS, COMPLETED, APPROVED, NEEDS_REVISION.

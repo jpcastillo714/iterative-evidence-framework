@@ -1,0 +1,71 @@
+# Reglas del incremento — paso 4
+#
+# Una REGLA es normativa y verificable: "el sistema debe cumplir X".
+# Su RATIONALE es historico: "elegimos X sobre Y porque Z".
+#
+# Van juntas a proposito. Separadas en dos archivos —reglas por un lado, bitacora de
+# decisiones por otro— se desincronizan siempre: se cambia la regla y nadie actualiza
+# la bitacora, y seis meses despues nadie sabe por que la regla dice lo que dice.
+#
+# Estas reglas nacen con `scope: increment`: rigen solo aqui. Al cerrar el incremento,
+# `--mode merge-increment` las promueve a `initiative/specs/rules.yml` con
+# `scope: project`, y desde entonces rigen todo el proyecto.
+
+schema_version: "2.0"
+kind: increment_rules
+
+rules:
+
+  - id: "RUL-001-001"          # NNN del incremento + correlativo: la procedencia va en el id
+    statement: >-
+      Enunciado normativo y verificable. Si no se puede escribir un test que lo
+      compruebe, todavia no es una regla: es una intencion.
+
+    rationale: >-
+      Por que existe esta regla. Que se descubrio, que alternativa se descarto y por
+      que. Esta es la parte que nadie recuerda en seis meses y la que evita que el
+      siguiente la deshaga por parecerle arbitraria.
+
+    evidence:                  # que la sustenta: tests, hallazgos, inspeccion
+      - "TST-ACC-001"
+
+    applies_to: "modulo.o.entidad.que.gobierna"
+    # ^ Es lo que el motor compara al promover. Dos reglas con el mismo `applies_to`
+    #   estan gobernando lo mismo: o una supersede a la otra, o hay contradiccion.
+    #   Sin este campo el conflicto no se puede detectar y se cuelan en silencio.
+
+    scope: increment           # increment | project  (merge-increment lo sube a project)
+    status: proposed           # proposed | active | superseded | rejected
+    priority: high             # critical | high | medium | low
+
+    # supersedes: "RUL-000-002"
+    # ^ Obligatorio si esta regla contradice una que ya rige el proyecto. Sin el, la
+    #   promocion se DETIENE. La regla superada no se borra: queda marcada, apuntando
+    #   a esta. Borrarla perderia por que el proyecto penso lo contrario un dia.
+
+    since: "AAAA-MM-DD"
+
+  - id: "RUL-001-002"
+    statement: >-
+      Segunda regla.
+    rationale: >-
+      Su motivo.
+    evidence: []
+    applies_to: ""
+    scope: increment
+    status: proposed
+    priority: medium
+    since: "AAAA-MM-DD"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Decisiones abiertas
+#
+# Lo que todavia no se decide. Se resuelve EN LA COMPUERTA de este paso, no despues:
+# una decision aplazada hasta la implementacion la termina tomando el codigo, en
+# silencio, y sin que nadie la haya aprobado.
+# ─────────────────────────────────────────────────────────────────────────────
+decisiones_pendientes:
+  - pregunta: "Que hay que decidir"
+    opciones: ["A", "B"]
+    bloquea: ["RUL-001-002"]
+    resolver_en: "la compuerta del paso 4"

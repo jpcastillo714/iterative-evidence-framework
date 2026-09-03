@@ -1,6 +1,6 @@
 tests:
   - id: "TST-ACC-001"
-    linked_rule: "BR-001"
+    linked_rule: "RUL-001-001"
     scenario: "Validación de escenario nominal"
     given: "Un estado inicial específico del sistema"
     when: "El usuario o sistema realiza una acción"

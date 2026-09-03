@@ -43,7 +43,7 @@ def test_no_hay_un_proyecto_dentro_del_bundle():
 
 
 def test_no_hay_estado_ni_artefactos_de_incremento_sueltos():
-    prohibidos = {"state.yml", "charter.md", "business-rules.yml", "acceptance-tests.yml",
+    prohibidos = {"state.yml", "charter.md", "rules.yml", "acceptance-tests.yml",
                   "increment-report.md", "inspection-report.md", "model-card.md"}
     encontrados = [
         str(p.relative_to(BUNDLE))
@@ -160,12 +160,19 @@ def test_las_versiones_del_bundle_y_la_extension_coinciden():
     )
 
 
-def test_cada_preset_tiene_sus_tres_archivos():
+def test_cada_preset_tiene_sus_dos_archivos():
+    """Ya no hay `directory-convention.yml`: las rutas vienen del layout, no del preset."""
     for d in (BUNDLE / "presets").iterdir():
         if not d.is_dir():
             continue
-        for archivo in ("preset.yml", "directory-convention.yml", "agents-fragment.md"):
+        for archivo in ("preset.yml", "agents-fragment.md"):
             assert (d / archivo).exists(), f"al preset `{d.name}` le falta {archivo}"
+
+
+def test_existen_los_catalogos_de_roles_y_layouts():
+    """Sin ellos ningun preset puede resolver donde va nada."""
+    for f in ("core/roles.yml", "core/layouts.yml"):
+        assert (BUNDLE / f).exists(), f"falta {f}"
 
 
 def test_no_quedan_referencias_a_archivos_borrados():

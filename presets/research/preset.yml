@@ -1,0 +1,43 @@
+# Preset `research` — tesis, memorias, papers, investigacion.
+#
+# Absorbe lo que antes era `academic`. La numeracion 00_-08_ ya NO vive aqui: es el
+# layout `numbered` del proyecto, disponible para cualquier preset.
+#
+# Cambia el vocabulario al del metodo cientifico y anade los roles de un trabajo cuyo
+# entregable principal es un documento largo defendido ante alguien.
+
+id: research
+name: "Investigacion"
+description: >-
+  Tesis, memorias, papers y trabajo cientifico. El entregable es un documento
+  defendible; el codigo es un medio, no el fin.
+extends: generic
+
+roles:
+  - admin              # cronograma, compromisos con el profesor guia o el comite
+  - onboarding
+  - referencias        # library.bib, papers, notas de lectura
+  - metodologia
+  - exploracion
+  - datos_raw
+  - datos_processed
+  - resultados
+  - avances            # los informes de avance periodicos
+  - documento          # la memoria o el paper
+  - presentaciones     # avances, pre-defensa, defensa, posters
+
+cycles:
+  build:
+    rename:
+      1_charter: "Hipotesis y Alcance"
+      2_empirical_inspection: "Exploracion de Datos"
+      3_data_contracts: "Esquema de Datos"
+      4_rules: "Reglas del Modelo"
+      5_acceptance_tests: "Criterios de Evaluacion"
+      6_implementation: "Implementacion"
+      7_verification: "Evaluacion y Resultados"
+  exploration:
+    rename:
+      1_objective: "Pregunta de Investigacion"
+      2_analysis: "Analisis Exploratorio"
+      2b_data_contract: "Formalizacion de Datos"

@@ -1,9 +1,9 @@
-id: chk-04-business-rules
+id: chk-04-rules
 name: "Verificación de Business Rules"
 automated_checks:
   - id: auto-01
-    description: "El archivo business-rules.yml existe"
-    script: "test -f business-rules.yml"
+    description: "El archivo rules.yml existe"
+    script: "test -f rules.yml"
 manual_checks:
   - id: man-01
     description: "Cada regla tiene un ID único y atómico."

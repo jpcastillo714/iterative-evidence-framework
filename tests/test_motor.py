@@ -14,14 +14,32 @@ from conftest import correr, leer_state, escribir_state, marcar_paso, sembrar_ar
 # ─── init ────────────────────────────────────────────────────────────────────
 
 def test_init_crea_estado_y_directorios(tmp_path):
-    r = correr("--mode", "init", "--project-dir", str(tmp_path), "--preset", "academic",
-               "--initiative-name", "Tesis")
+    r = correr("--mode", "init", "--project-dir", str(tmp_path), "--preset", "research",
+               "--layout", "numbered", "--initiative-name", "Tesis")
     assert r.returncode == 0, r.stderr
     state = leer_state(tmp_path)
-    assert state["initiative"]["preset"] == "academic"
+    assert state["initiative"]["preset"] == "research"
+    assert state["initiative"]["layout"] == "numbered"
     assert state["increments"] == []
-    assert (tmp_path / "00_admin").is_dir(), "debe usar la convencion del preset, no una fija"
+    assert state["focus"] is None
+    # Las rutas salen del LAYOUT, no del preset: es lo que permite que el mismo
+    # preset se use con carpetas numeradas o planas segun lo que pida el proyecto.
+    assert (tmp_path / "00_admin").is_dir()
     assert (tmp_path / "07_documento").is_dir()
+
+
+def test_el_mismo_preset_con_el_otro_layout_da_otras_rutas(tmp_path):
+    r = correr("--mode", "init", "--project-dir", str(tmp_path), "--preset", "research",
+               "--layout", "flat", "--initiative-name", "Tesis")
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / "admin").is_dir() and (tmp_path / "docs").is_dir()
+    assert not (tmp_path / "00_admin").exists()
+
+
+def test_init_crea_la_constitucion(tmp_path):
+    correr("--mode", "init", "--project-dir", str(tmp_path), "--preset", "generic",
+           "--initiative-name", "P")
+    assert (tmp_path / "initiative" / "specs" / "constitution.md").exists()
 
 
 def test_init_no_pisa_un_estado_existente(tmp_path):
@@ -84,7 +102,7 @@ def test_no_se_aprueba_un_paso_sin_compuerta(proyecto):
 def test_el_ciclo_completo_llega_al_paso_7(proyecto):
     """Regresion del bug que dejaba el ciclo trabado en el paso 2 para siempre."""
     sembrar_artefactos(proyecto)
-    claves = ["1_charter", "2_empirical_inspection", "3_data_contracts", "4_business_rules",
+    claves = ["1_charter", "2_empirical_inspection", "3_data_contracts", "4_rules",
               "5_acceptance_tests", "6_implementation"]
     for clave in claves:
         marcar_paso(proyecto, clave, "COMPLETED")
@@ -187,33 +205,33 @@ def test_merge_rechaza_compuertas_sin_aprobar(proyecto):
 def test_merge_promueve_a_la_especificacion_viva(proyecto):
     """Cierra el problema de origen: reglas duplicadas sin fuente unica de verdad."""
     sembrar_artefactos(proyecto)
-    for clave in ("1_charter", "4_business_rules", "5_acceptance_tests"):
+    for clave in ("1_charter", "4_rules", "5_acceptance_tests"):
         marcar_paso(proyecto, clave, "APPROVED")
     r = correr("--mode", "merge-increment", "--project-dir", str(proyecto),
                "--increment", "001_demo")
     assert r.returncode == 0, r.stderr
 
-    specs = proyecto / "initiative" / "specs" / "business-rules.yml"
+    specs = proyecto / "initiative" / "specs" / "rules.yml"
     assert specs.exists()
     doc = yaml.safe_load(specs.read_text(encoding="utf-8"))
-    assert doc["rules"][0]["id"] == "BR-001"
+    assert doc["rules"][0]["id"] == "RUL-001-001"
     assert doc["rules"][0]["_origen"]["increment"] == "001_demo", "cada regla lleva su procedencia"
     assert leer_state(proyecto)["increments"][0]["status"] == "MERGED"
 
 
 def test_merge_dry_run_no_escribe(proyecto):
     sembrar_artefactos(proyecto)
-    for clave in ("1_charter", "4_business_rules", "5_acceptance_tests"):
+    for clave in ("1_charter", "4_rules", "5_acceptance_tests"):
         marcar_paso(proyecto, clave, "APPROVED")
     correr("--mode", "merge-increment", "--project-dir", str(proyecto),
            "--increment", "001_demo", "--dry-run")
-    assert not (proyecto / "initiative" / "specs" / "business-rules.yml").exists()
+    assert not (proyecto / "initiative" / "specs" / "rules.yml").exists()
     assert leer_state(proyecto)["increments"][0]["status"] == "ACTIVE"
 
 
 def test_merge_de_un_segundo_incremento_actualiza_la_regla(proyecto):
     sembrar_artefactos(proyecto)
-    for clave in ("1_charter", "4_business_rules", "5_acceptance_tests"):
+    for clave in ("1_charter", "4_rules", "5_acceptance_tests"):
         marcar_paso(proyecto, clave, "APPROVED")
     correr("--mode", "merge-increment", "--project-dir", str(proyecto), "--increment", "001_demo")
 
@@ -221,24 +239,24 @@ def test_merge_de_un_segundo_incremento_actualiza_la_regla(proyecto):
     state["increments"].append({
         "id": "002", "slug": "002_ajuste", "name": "Ajuste", "type": "build",
         "status": "ACTIVE", "current_step": "7",
-        "steps": {"1_charter": "APPROVED", "4_business_rules": "APPROVED",
+        "steps": {"1_charter": "APPROVED", "4_rules": "APPROVED",
                   "5_acceptance_tests": "APPROVED"},
     })
     escribir_state(proyecto, state)
     d2 = proyecto / "initiative" / "increments" / "002_ajuste"
     d2.mkdir(parents=True)
-    (d2 / "business-rules.yml").write_text(yaml.safe_dump({"rules": [
-        {"id": "BR-001", "description": "Regla CORREGIDA", "priority": "critical", "status": "approved"},
-        {"id": "BR-002", "description": "Regla nueva", "priority": "low", "status": "draft"},
+    (d2 / "rules.yml").write_text(yaml.safe_dump({"rules": [
+        {"id": "RUL-001-001", "description": "Regla CORREGIDA", "priority": "critical", "status": "approved"},
+        {"id": "RUL-001-002", "description": "Regla nueva", "priority": "low", "status": "draft"},
     ]}), encoding="utf-8")
 
     r = correr("--mode", "merge-increment", "--project-dir", str(proyecto), "--increment", "002_ajuste")
     assert r.returncode == 0, r.stderr
-    doc = yaml.safe_load((proyecto / "initiative" / "specs" / "business-rules.yml").read_text(encoding="utf-8"))
+    doc = yaml.safe_load((proyecto / "initiative" / "specs" / "rules.yml").read_text(encoding="utf-8"))
     reglas = {r["id"]: r for r in doc["rules"]}
-    assert reglas["BR-001"]["description"] == "Regla CORREGIDA"
-    assert reglas["BR-001"]["_origen"]["increment"] == "002_ajuste"
-    assert "BR-002" in reglas
+    assert reglas["RUL-001-001"]["description"] == "Regla CORREGIDA"
+    assert reglas["RUL-001-001"]["_origen"]["increment"] == "002_ajuste"
+    assert "RUL-001-002" in reglas
 
 
 # ─── Robustez del estado ─────────────────────────────────────────────────────

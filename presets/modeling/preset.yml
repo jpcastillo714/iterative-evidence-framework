@@ -1,0 +1,46 @@
+# Mixin `modeling` — se compone con cualquier preset.
+#
+#     extends: [analysis, modeling]      analisis que entrena modelos
+#     extends: [product, modeling]       sistema con un modelo dentro
+#     extends: [research, modeling]      tesis con componente de ML
+#
+# Antes esto era el preset `ml`, que extendia data-science y por tanto NO podia
+# usarse dentro de engineering sin duplicarlo entero. Como mixin, aporta solo lo
+# suyo: un paso, tres roles, y nada mas.
+#
+# El paso 6b existe porque "el modelo generaliza" y "el pipeline funciona" son
+# preguntas distintas. Un modelo puede pasar todos los tests de integracion y aun
+# asi no servir. Lleva compuerta: publicar un modelo es una decision, no un tramite.
+
+id: modeling
+name: "Modelado"
+description: >-
+  Mixin que anade la evaluacion del modelo como paso propio con compuerta y model
+  card. Se compone con cualquier preset base.
+extends: null
+
+paths:
+  increment_dir: "initiative/increments/{slug}"
+
+roles:
+  - config             # ningun hiperparametro vive en el codigo
+  - modelos
+  - experimentos
+
+cycles:
+  # Un mixin no redeclara el ciclo: lo inyecta donde corresponde. Si tuviera que
+  # copiar los siete pasos, cualquier cambio en el ciclo base habria que replicarlo
+  # aqui, y es exactamente el tipo de duplicacion que este rediseno elimina.
+  build:
+    insert_after:
+      6_implementation:
+        - key: "6b_model_evaluation"
+          ref: "6b"
+          name: "Evaluacion del Modelo"
+          artifact: "model-card.md"
+          human_gate: true
+          template: "core/templates/model-card-template.md"
+          instructions: "core/steps/06b_model_evaluation/step-instructions.md"
+
+# Este preset es un mixin: aporta piezas, no se usa solo.
+abstract: true

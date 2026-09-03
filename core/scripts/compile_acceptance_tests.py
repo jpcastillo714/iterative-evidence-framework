@@ -315,7 +315,7 @@ def main() -> None:
     destino.write_text(codigo, encoding="utf-8")
 
     # Cada TST y cada BR se convierten en una marca de pytest, para poder correr
-    # "todos los tests de la regla BR-003" con `pytest -m br_003`. Registrarlas
+    # "todos los tests de la regla RUL-001-003" con `pytest -m br_003`. Registrarlas
     # evita el ruido de PytestUnknownMarkWarning.
     marcas = {"ief"}
     for t in tests:

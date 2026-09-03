@@ -21,7 +21,7 @@ El objetivo principal de este paso es examinar **datos reales, documentos reales
 
 Este paso se ejecuta después de haber completado la fase inicial de definición.
 * **Prerrequisito:** El Paso 1 (Charter) debe estar COMPLETADO.
-* **Relación con otros pasos:** Los descubrimientos realizados y documentados en este paso son la materia prima que alimentará directamente el Paso 3 (Contratos de Datos) y el Paso 4 (Reglas de Negocio). Sin una inspección empírica rigurosa, los contratos y las reglas estarán basados en alucinaciones, lo que inevitablemente causará fallos en las etapas de pruebas e implementación.
+* **Relación con otros pasos:** Los descubrimientos realizados y documentados en este paso son la materia prima que alimentará directamente el Paso 3 (Contratos de Datos) y el Paso 4 (Reglas). Sin una inspección empírica rigurosa, los contratos y las reglas estarán basados en alucinaciones, lo que inevitablemente causará fallos en las etapas de pruebas e implementación.
 
 ## Reglas Críticas
 

@@ -1,0 +1,34 @@
+# Preset `product` — sistemas que se despliegan y alguien mantiene.
+#
+# Absorbe lo que antes era `engineering`. El entregable es un sistema en produccion,
+# asi que anade lo que ese contexto arrastra: pipelines, despliegue y —sobre todo—
+# material de onboarding, porque cada pocos meses llega alguien nuevo al equipo.
+
+id: product
+name: "Producto / Ingenieria"
+description: >-
+  Pipelines, servicios y sistemas de datos que se despliegan y se mantienen. El
+  entregable corre en produccion y lo hereda otra persona.
+extends: generic
+
+roles:
+  - onboarding         # el equipo rota; el proyecto no puede vivir en una cabeza
+  - metodologia
+  - config
+  - pipelines
+  - datos_raw
+  - datos_interim
+  - datos_processed
+  - resultados
+  - avances
+  - despliegue         # runbooks, app, API
+
+cycles:
+  build:
+    rename:
+      2_empirical_inspection: "Perfilado de Fuentes"
+      3_data_contracts: "Contrato de Datos"
+      4_rules: "Reglas de Negocio"
+      5_acceptance_tests: "Criterios de Aceptacion"
+      6_implementation: "Implementacion del Pipeline"
+      7_verification: "Verificacion y Despliegue"

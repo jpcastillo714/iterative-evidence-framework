@@ -1,0 +1,98 @@
+##############################################################################
+# Catalogo de roles — que cosas acumula un proyecto.
+#
+# Un ROL es una necesidad, no una ruta. "Necesito un sitio para las presentaciones"
+# es un rol; que ese sitio se llame `08_presentaciones/` o `presentations/` lo
+# decide el LAYOUT (core/layouts.yml), no el rol.
+#
+# Este catalogo sale de un ejercicio concreto: ponerse en el lugar de un estudiante
+# de memoria, un ingeniero de datos, un cientifico de datos, un equipo de MVP y un
+# investigador de ML, y anotar que se les acumula encima a lo largo del proyecto.
+# La conclusion fue que acumulan casi lo mismo. Lo que cambia entre ellos es el
+# vocabulario y la ceremonia, no las carpetas. Por eso el catalogo es unico.
+#
+# Un preset declara `roles: [...]` y hereda los de sus padres de forma ADITIVA.
+##############################################################################
+
+schema_version: "1.0"
+
+roles:
+
+  # ── Siempre presente ───────────────────────────────────────────────────────
+  initiative:
+    description: "El motor IEF: state.yml, increments/ y specs/ (la especificacion viva)."
+    always: true
+
+  # ── Gobierno del proyecto ──────────────────────────────────────────────────
+  admin:
+    description: "Cronograma, requisitos, compromisos, actas de reunion, estado administrativo."
+    para: "Lo llena quien rinde cuentas a alguien: un profesor guia, un cliente, un comite."
+
+  onboarding:
+    description: "Que es esto, como empiezo, mapa del proyecto. Material de entrada."
+    para: >-
+      Lo necesitan los cinco perfiles del ejercicio. En un equipo, porque cada seis meses
+      llega alguien nuevo. Trabajando solo, porque tu yo de dentro de un ano tampoco se
+      acuerda de por que el pipeline tiene esa etapa rara.
+
+  referencias:
+    description: "Papers, bibliografia, documentacion externa, notas de lectura."
+
+  metodologia:
+    description: "Diseno experimental, decisiones de arquitectura, protocolos."
+
+  # ── Trabajo ────────────────────────────────────────────────────────────────
+  codigo:
+    description: "Codigo fuente reutilizable. Lo que sobrevive a la exploracion."
+
+  config:
+    description: "Configuracion declarativa. Todo parametro vive aqui, no en el codigo."
+
+  tests:
+    description: "Pruebas, incluidos los criterios de aceptacion compilados a pytest."
+
+  pipelines:
+    description: "Etapas reproducibles del pipeline."
+
+  exploracion:
+    description: "Notebooks y analisis desechables. Nada de aqui se cita sin migrar a codigo."
+
+  scratch:
+    description: "Playground. Nada de aqui sobrevive al incremento."
+
+  # ── Datos ──────────────────────────────────────────────────────────────────
+  datos_raw:
+    description: "Datos de origen. SOLO LECTURA: nunca se editan en el sitio."
+
+  datos_interim:
+    description: "Pasos intermedios, reproducibles desde raw."
+
+  datos_processed:
+    description: "Conjuntos listos para usar, reproducibles por el pipeline."
+
+  # ── Modelado ───────────────────────────────────────────────────────────────
+  modelos:
+    description: "Artefactos de modelo versionados."
+
+  experimentos:
+    description: "Registro de corridas, metricas y comparaciones contra lineas base."
+
+  # ── Salidas ────────────────────────────────────────────────────────────────
+  resultados:
+    description: "Figuras, tablas y metricas. Regenerables con un comando."
+
+  avances:
+    description: "Reportes cortos y periodicos: quincenales, de sprint, de avance."
+    para: >-
+      Va SEPARADO de `documento` a proposito. Muchos reportes cortos y un entregable
+      largo son necesidades distintas: cadencia distinta, audiencia distinta, y mezclarlos
+      hace que ninguno de los dos se encuentre cuando se busca.
+
+  documento:
+    description: "El entregable largo: tesis, memoria, informe final, paper."
+
+  presentaciones:
+    description: "Decks, posters, defensas y material complementario."
+
+  despliegue:
+    description: "App, API, runbooks operacionales."

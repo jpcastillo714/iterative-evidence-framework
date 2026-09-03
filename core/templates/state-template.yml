@@ -1,53 +1,70 @@
-# IEF State — Schema V3 (Multi-Incremento)
-# Generado por: ief-init
-# Este archivo es la máquina de estados persistente del proyecto.
-# NO editar manualmente — usar verify_frame.py o las skills IEF.
+# IEF State — esquema V4
 #
-# schema_version 3.0: Introduce soporte para múltiples incrementos coexistentes,
-# manejo de dependencias externas y nuevos estados de ciclo de vida.
+# La maquina de estados del proyecto. NO se edita a mano: `verify_frame.py` es la unica
+# pieza que la escribe, de forma atomica y dejando historial. Editarla directamente
+# rompe la constancia de las compuertas, que es justo lo que existen para dejar.
 #
-# Estados del Incremento:
-# - PAUSED: Pausa voluntaria (el equipo decide detener el trabajo).
-# - BLOCKED: Pausa forzada por dependencia externa (requiere campo `blocked_by`).
-#
-# Incrementos de tipo 'exploration' usan las siguientes llaves para pasos:
-# steps:
-#   1_objective: "IN_PROGRESS"
-#   2_analysis: "PENDING"
-#   2b_data_contract: "PENDING"  # Opcional
-#   3_findings: "PENDING"
+# Que cambio en V4
+# ----------------
+#   focus          reemplaza a `active_increment`. `status: ACTIVE` (varios) y `focus`
+#                  (uno) son cosas distintas: antes vivian en el mismo campo y activar
+#                  un segundo frente robaba el puntero en silencio.
+#   layout         que nomenclatura de carpetas usa el proyecto (flat | numbered).
+#   blocked        bloqueo estructurado con tipo, en vez de un texto libre.
+#   rules_base     contra que version de las reglas se abrio cada incremento.
+#   max_active     limite blando de frentes simultaneos: avisa, no bloquea.
 
-schema_version: "3.0"
+schema_version: "4.0"
 
 initiative:
   id: "{{INITIATIVE_ID}}"
   name: "{{INITIATIVE_NAME}}"
-  preset: "{{PRESET_NAME}}"
+  preset: "{{PRESET_NAME}}"        # generic | research | product | analysis | ...
+  layout: "{{LAYOUT_NAME}}"        # flat | numbered
   created_at: "{{CREATED_AT}}"
-  updated_at: "{{UPDATED_AT}}"
 
-active_increment: "{{FIRST_INCREMENT_SLUG}}"
+# A que incremento apuntan los comandos que no llevan `--increment`.
+# Es UNO, aunque haya varios en ACTIVE. Se mueve con `--mode focus`.
+focus: null
 
-increments:
-  - id: "001"
-    slug: "{{FIRST_INCREMENT_SLUG}}"
-    name: "{{FIRST_INCREMENT_NAME}}"
-    type: "build"  # build | exploration
-    status: "ACTIVE"  # ACTIVE | PAUSED | BLOCKED | COMPLETED | ABANDONED
-    branch: null  # Rama Git asociada (opcional)
-    current_step: 1
-    steps:
-      1_charter: "IN_PROGRESS"
-      2_empirical_inspection: "PENDING"
-      3_data_contracts: "PENDING"
-      4_business_rules: "PENDING"
-      5_acceptance_tests: "PENDING"
-      6_implementation: "PENDING"
-      7_verification: "PENDING"
-    history: []
-    # Campos para PAUSED:
-    # paused_at_step: null
-    # paused_reason: null
-    # Campos para BLOCKED:
-    # blocked_by: null
-    # blocked_reason: null
+# Cuantos frentes simultaneos antes de que el motor avise. No lo impide: cuantos
+# puedes sostener a la vez lo sabes tu. Pero conviene que la decision sea consciente.
+max_active: 3
+
+increments: []
+# Anatomia de un incremento:
+#
+#   - id: "001"
+#     slug: "001_ingesta_ventas"
+#     name: "Ingesta de ventas"
+#     type: "build"              # build | exploration | prototype
+#     status: "ACTIVE"           # ACTIVE | PAUSED | BLOCKED | COMPLETED | MERGED | ABANDONED
+#     current_step: "4"
+#     steps:
+#       1_charter: "APPROVED"
+#       2_empirical_inspection: "COMPLETED"
+#       3_data_contracts: "COMPLETED"
+#       4_rules: "IN_PROGRESS"
+#       5_acceptance_tests: "PENDING"
+#       6_implementation: "PENDING"
+#       7_verification: "PENDING"
+#     approvals:
+#       1_charter: {approved_by: "jp", approved_at: "..."}
+#     branch: "inc/001-ingesta-ventas"
+#     rules_base: "sha256:ab12cd34..."   # las reglas del proyecto al abrirlo
+#     opened_at: "..."
+#
+#     # PAUSED — voluntario: tu decidiste parar.
+#     paused: {reason: "cambio la prioridad", at_step: "4", since: "..."}
+#
+#     # BLOCKED — forzado: algo externo impide avanzar.
+#     blocked:
+#       kind: "external"         # increment | external | decision
+#       on: null                 # slug del bloqueante si kind == increment
+#       reason: "esperando el extracto de ventas del equipo de BI"
+#       since: "..."
+#       expected: "2026-09-20"   # opcional; `doctor` avisa cuando pasa
+
+history: []
+# Cada accion queda registrada: INIT, NEW_INCREMENT, FOCUS, ADVANCE_STEP,
+# APPROVE_STEP, SET_STATUS, REWIND, MERGE_INCREMENT.

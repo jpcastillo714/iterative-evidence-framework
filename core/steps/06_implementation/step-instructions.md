@@ -6,7 +6,7 @@
 |-------|-------|
 | **Paso** | 6 — Implementación |
 | **Tipo de Incremento** | `build` |
-| **Inputs obligatorios** | `initiative/increments/<SLUG>/data-contract.yml`, `business-rules.yml`, `acceptance-tests.yml` |
+| **Inputs obligatorios** | `initiative/increments/<SLUG>/data-contract.yml`, `rules.yml`, `acceptance-tests.yml` |
 | **Output** | Código en `src/` y tests en `tests/` |
 | **Human Gate** | ❌ No |
 | **Protocolo si algo no cuadra** | Ver sección "Protocolo de Retroceso Ligero" más abajo. |
@@ -25,7 +25,7 @@ El objetivo de este paso es escribir el código fuente real que da vida a la sol
 ## Reglas Críticas
 
 1. **Respeto Absoluto a los Contratos de Datos:** El código DEBE honrar los contratos de datos establecidos en el Paso 3. Si el contrato indica que un campo es anulable (nullable), el código debe manejar los nulos adecuadamente. Si indica un tipo específico o límite, la validación debe reflejarlo.
-2. **Implementación Trazable de Reglas de Negocio:** El código DEBE implementar explícitamente las reglas de negocio. Cada regla (`BR-XXX`) debe ser trazable dentro de la base de código. Esto puede lograrse mediante comentarios en funciones clave, nombres de funciones autodescriptivos o un archivo de mapeo.
+2. **Implementación Trazable de Reglas:** El código DEBE implementar explícitamente las reglas de negocio. Cada regla (`RUL-NNN-XXX`) debe ser trazable dentro de la base de código. Esto puede lograrse mediante comentarios en funciones clave, nombres de funciones autodescriptivos o un archivo de mapeo.
 3. **Pruebas Continuas (Test As You Go):** Ejecuta las pruebas de aceptación y unitarias a medida que desarrollas. No postergues la ejecución de pruebas hasta la fase de verificación. El desarrollo debe ser guiado por las pruebas.
 4. **Adherencia a Convenciones:** Sigue estrictamente las convenciones existentes del proyecto (reglas de linting, formateo de código, nomenclatura de variables, arquitectura de carpetas).
 5. **Cero Sobre-Ingeniería (No Over-engineering):** Implementa exactamente lo que dice la especificación, nada más. No añadas características especulativas ni abstracciones innecesarias que no estén justificadas por las reglas de negocio actuales.

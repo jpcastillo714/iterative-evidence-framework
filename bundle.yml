@@ -2,7 +2,7 @@ schema_version: "3.1"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.6.0"
+  version: "0.7.0"
   role: "framework"
   description: >-
     Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
@@ -17,7 +17,7 @@ requires:
 provides:
   extensions:
     - id: "ief"
-      version: "0.6.0"
+      version: "0.7.0"
       source: "./extension"
 
   # ───────────────────────────────────────────────────────────────────────────
@@ -37,23 +37,30 @@ provides:
 
   presets:
     - id: "generic"
-      description: "Ciclo base: 7 pasos build, 4 exploration, compuertas en 1, 4 y 5."
+      description: "Ciclo base: build (7 pasos), exploration (4) y prototype (4)."
       source: "./presets/generic"
-    - id: "engineering"
-      description: "Pipelines, ETL e ingeniería de datos."
-      source: "./presets/engineering"
-    - id: "data-science"
-      description: "Análisis exploratorio y respuestas a partir de datos."
-      source: "./presets/data-science"
-    - id: "ml"
-      description: "Modelos de ML. Añade el paso Evaluación del Modelo con compuerta y model card."
-      source: "./presets/ml"
-    - id: "mvp"
-      description: "Prototipos y pruebas de concepto. Ciclo corto de 4 pasos y una compuerta."
-      source: "./presets/mvp"
-    - id: "academic"
-      description: "Tesis y papers. Numeración 00_admin … 08_presentaciones."
-      source: "./presets/academic"
+    - id: "research"
+      description: "Tesis, memorias y papers. El entregable es un documento defendible."
+      source: "./presets/research"
+    - id: "product"
+      description: "Sistemas que se despliegan y alguien mantiene."
+      source: "./presets/product"
+    - id: "analysis"
+      description: "Responder preguntas con datos. El entregable es un hallazgo."
+      source: "./presets/analysis"
+    - id: "modeling"
+      description: "Mixin componible: anade la Evaluacion del Modelo con compuerta y model card."
+      source: "./presets/modeling"
+
+  # El catalogo de roles y los layouts: la estructura de carpetas es un eje aparte
+  # del preset, porque no varia por tipo de proyecto sino por gusto y herramientas.
+  catalogs:
+    - id: "roles"
+      description: "Que cosas acumula un proyecto. Un rol es una necesidad, no una ruta."
+      source: "./core/roles.yml"
+    - id: "layouts"
+      description: "Como se llaman las carpetas de cada rol: flat | numbered."
+      source: "./core/layouts.yml"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Debe pasar entero antes de publicar una versión del bundle.

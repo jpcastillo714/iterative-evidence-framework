@@ -34,10 +34,12 @@ Trabajo sobre el framework mismo, y nada más:
 
 | Tarea | Dónde |
 |---|---|
-| Cambiar el ciclo de un preset | `presets/<id>/preset.yml` |
-| Añadir un preset | `presets/<nuevo>/` |
-| Cambiar el motor de estado | `core/scripts/verify_frame.py` |
-| Cambiar cómo se cargan los presets | `core/scripts/ief_preset.py` |
+| Añadir un tipo de carpeta que un proyecto necesite | `core/roles.yml` (y las rutas en `core/layouts.yml`) |
+| Añadir una forma de nombrar las carpetas | `core/layouts.yml` |
+| Cambiar el ciclo, el vocabulario o los roles de un preset | `presets/<id>/preset.yml` |
+| Añadir un preset o un mixin | `presets/<nuevo>/` |
+| Cambiar el motor de estado, foco, bloqueos o merge | `core/scripts/verify_frame.py` |
+| Cambiar la herencia de presets o la resolución de roles | `core/scripts/ief_preset.py` |
 | Cambiar la traducción YAML → pytest | `core/scripts/compile_acceptance_tests.py` |
 | Cambiar plantillas o instrucciones de paso | `core/templates/`, `core/steps/` |
 | Cambiar lo que lee un agente | `extension/commands/` |
@@ -50,6 +52,23 @@ python core/scripts/verify_frame.py --mode check-preset
 python core/scripts/verify_frame.py --mode check-steps
 pytest tests/ -q
 ```
+
+## Los tres ejes: no los vuelvas a mezclar
+
+El error de diseño que este bundle ya cometió una vez fue tratar como «tipo de proyecto»
+tres cosas independientes. Si vas a tocar los presets, ten esto presente:
+
+| Eje | Decide | Dónde vive |
+|---|---|---|
+| **Layout** | Cómo se llaman las carpetas | `core/layouts.yml`, elegido por proyecto |
+| **Preset** | Vocabulario y ceremonia | `presets/<id>/preset.yml` |
+| **Ciclo** | Cuánto rigor lleva un trabajo | Por incremento (`build`/`exploration`/`prototype`) |
+
+Señales de que se están volviendo a mezclar:
+
+- Un preset que declara rutas de carpeta → eso es del layout.
+- Un preset llamado como un nivel de rigor (`mvp`, `quick`, `strict`) → eso es un ciclo.
+- Dos presets que se diferencian solo en un paso → eso es un mixin.
 
 ---
 
@@ -67,11 +86,15 @@ pytest tests/ -q
 3. **Un preset trae lo suyo.** Sus scripts, plantillas y documentos viven en
    `presets/<id>/`, nunca en `core/`.
 
-4. **Nada de material generado sin verificar.** Este repositorio ya arrastró informes
+4. **Los roles son necesidades, no rutas.** Antes de añadir una carpeta a un preset,
+   pregúntate si es una necesidad que otros proyectos también tienen: si lo es, va al
+   catálogo de roles y a los dos layouts. Un preset nunca declara una ruta.
+
+5. **Nada de material generado sin verificar.** Este repositorio ya arrastró informes
    que citaban código inexistente y resultados de tests que nunca se ejecutaron. Si vas a
    escribir que algo funciona, ejecútalo primero y pega la salida.
 
-5. **Si no aporta, no entra.** Sin carpetas de archivo histórico, sin `dist/` con
+6. **Si no aporta, no entra.** Sin carpetas de archivo histórico, sin `dist/` con
    versiones viejas, sin informes de fases pasadas, sin borradores. Para eso está el
    historial de git.
 

@@ -1,0 +1,77 @@
+##############################################################################
+# Layouts — como se llaman las carpetas de cada rol.
+#
+# El layout es una decision del PROYECTO (`--layout` al iniciar), no del preset.
+# Es cuestion de herramientas y de gusto, no de tipo de trabajo: un paquete Python
+# quiere `src/` en la raiz, una memoria agradece el orden visual del numerado, y
+# ambos proyectos pueden ser igual de cientificos.
+#
+# Los dos layouts cubren los MISMOS roles. Cambiar de layout no cambia lo que el
+# proyecto puede guardar, solo donde lo guarda.
+#
+# Excepcion deliberada: `tests` y `scratch` viven en la raiz en ambos layouts.
+# El descubrimiento de tests es convencion del ecosistema (pytest, CI) y esconderlo
+# bajo una carpeta numerada rompe herramientas por un beneficio estetico.
+##############################################################################
+
+schema_version: "1.0"
+
+layouts:
+
+  flat:
+    name: "Plano"
+    description: >-
+      Nombres convencionales del ecosistema. Lo que esperan pytest, los imports de
+      Python y la mayoria de las herramientas. Recomendado si el proyecto es
+      principalmente codigo.
+    paths:
+      initiative:      "initiative"
+      admin:           "admin"
+      onboarding:      "docs/onboarding"
+      referencias:     "references"
+      metodologia:     "docs/method"
+      codigo:          "src"
+      config:          "conf"
+      tests:           "tests"
+      pipelines:       "pipelines"
+      exploracion:     "notebooks"
+      scratch:         "scratch"
+      datos_raw:       "data/raw"
+      datos_interim:   "data/interim"
+      datos_processed: "data/processed"
+      modelos:         "models"
+      experimentos:    "experiments"
+      resultados:      "reports/figures"
+      avances:         "reports/progress"
+      documento:       "docs"
+      presentaciones:  "presentations"
+      despliegue:      "deploy"
+
+  numbered:
+    name: "Numerado"
+    description: >-
+      Orden visual explicito: el arbol se lee de arriba abajo en el orden en que
+      avanza el proyecto. Recomendado si el entregable principal es un documento
+      largo y el codigo es un medio, no el fin.
+    paths:
+      initiative:      "initiative"
+      admin:           "00_admin"
+      onboarding:      "01_inicio"
+      referencias:     "02_referencias"
+      metodologia:     "03_metodologia"
+      codigo:          "04_codigo/src"
+      config:          "04_codigo/conf"
+      pipelines:       "04_codigo/pipelines"
+      exploracion:     "04_codigo/notebooks"
+      despliegue:      "04_codigo/app"
+      tests:           "tests"
+      scratch:         "scratch"
+      datos_raw:       "05_datos/raw"
+      datos_interim:   "05_datos/interim"
+      datos_processed: "05_datos/processed"
+      modelos:         "06_resultados/modelos"
+      experimentos:    "06_resultados/experimentos"
+      resultados:      "06_resultados/figuras"
+      documento:       "07_documento"
+      presentaciones:  "08_presentaciones"
+      avances:         "09_avances"
