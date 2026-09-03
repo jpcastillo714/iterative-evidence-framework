@@ -1,3 +1,0 @@
-✓ Built iterative-evidence-framework-0.1.0.zip (109 files) → 
-C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\dist\iterative-evi
-dence-framework-0.1.0.zip

@@ -1,6 +1,0 @@
-
-✓ Extension 'Iterative Evidence Framework Extension' removed successfully
-
-Config files backed up to .specify/extensions/.backup/ief/
-
-To reinstall: specify extension add ief

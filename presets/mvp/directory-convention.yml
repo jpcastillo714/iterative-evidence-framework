@@ -1,0 +1,9 @@
+directories:
+  - path: "initiative"
+    description: "Motor IEF: state.yml, increments/ y specs/."
+  - path: "src"
+    description: "Codigo del prototipo."
+  - path: "tests"
+    description: "Los criterios del paso 2, ejecutables."
+  - path: "scratch"
+    description: "Playground. Nada de aqui sobrevive al MVP."

@@ -1,19 +1,22 @@
 ---
 name: iterative-evidence-framework
 description: >
-  Iterative Evidence Framework (IEF) V3 — metodología de ciclos (build y exploration)
-  para proyectos de software y datos operados por agentes de IA. El ciclo lo define el
-  preset, no el código; los criterios de aceptación se compilan a pytest; las compuertas
-  humanas bloquean el avance de forma mecánica; los incrementos se consolidan en una
-  especificación viva.
+  Iterative Evidence Framework (IEF) — extensión de spec-kit con ciclos incrementales
+  (build y exploration) para proyectos de software, datos y ML operados por agentes.
+  El ciclo lo define el preset, no el código; los criterios de aceptación se compilan a
+  pytest; las compuertas humanas bloquean el avance de forma mecánica; los incrementos
+  se consolidan en una especificación viva.
 ---
 
-# Iterative Evidence Framework (IEF) V3
+# Iterative Evidence Framework (IEF)
+
+> **El bundle no es un proyecto.** Nunca crees un `initiative/` dentro del directorio del
+> framework: el IEF se aplica a otros repositorios. Ver `AGENTS.md` del bundle.
 
 ## La regla que gobierna todo lo demás
 
 **Pregúntale al motor, no adivines.** El ciclo, las rutas, las compuertas y las
-plantillas salen del preset activo. Antes de escribir un artefacto:
+plantillas salen del preset activo, y cambian entre presets:
 
 ```bash
 python core/scripts/verify_frame.py --mode status --json
@@ -26,6 +29,8 @@ artefacto. **No inventes subcarpetas ni nombres de archivo.**
 
 ### Build — construir algo verificable
 
+En el preset `generic` son 7 pasos con compuertas en 1, 4 y 5:
+
 | Paso | Artefacto | Compuerta |
 |---|---|---|
 | 1. Charter | `charter.md` | ✋ |
@@ -36,13 +41,14 @@ artefacto. **No inventes subcarpetas ni nombres de archivo.**
 | 6. Implementación | *(código)* | |
 | 7. Verificación | `increment-report.md` | |
 
-Todos en `initiative/increments/<SLUG>/`. Un preset puede cambiar esta tabla; por eso
-se consulta, no se memoriza.
+**Otros presets cambian esta tabla.** `ml` añade un paso 6b (Evaluación del Modelo) con
+compuerta; `mvp` la recorta a 4 pasos y una compuerta. Por eso se consulta, no se
+memoriza.
 
 ### Exploration — investigar antes de construir
 
 `objective.md` → análisis → *(contrato opcional)* → `findings.md`. Sin compuertas.
-Nada de aquí se cita en un informe sin haber pasado por un ciclo build.
+Nada de aquí se cita como resultado sin haber pasado por un ciclo build.
 
 ## Comandos
 
@@ -54,10 +60,9 @@ Nada de aquí se cita en un informe sin haber pasado por un ciclo build.
 | `/speckit.ief.status` | Estado de todos los incrementos |
 | `/speckit.ief.next` | Verifica y avanza al siguiente paso |
 | `/speckit.ief.pause` · `.rewind` | Pausar; retroceder con motivo declarado |
-| `/speckit.ief.evidence` | Ejecuta un test y emite su carpeta `VRN-*` con hashes |
 
 Modos del motor sin comando propio: `check-gates` (CI), `check-preset`, `check-bundle`,
-`merge-increment`.
+`check-steps`, `merge-increment`.
 
 ## Reglas del agente
 
@@ -94,7 +99,7 @@ Modos del motor sin comando propio: `check-gates` (CI), `check-preset`, `check-b
    ```
    Promueve las reglas a `initiative/specs/` con su procedencia. Sin este paso, cada
    incremento acumula su propia copia de las reglas y el proyecto pierde su fuente única
-   de verdad — el fallo que originó esta versión del framework.
+   de verdad.
 
 7. **Zero clutter.** Cada artefacto en la ruta que declara el preset. Lo temporal, en
    `scratch/`.
@@ -104,21 +109,20 @@ Modos del motor sin comando propio: `check-gates` (CI), `check-preset`, `check-b
 Hay que elegir una explícitamente; confundirlas corrompe el informe:
 
 - **Fallo de ejecución** → arreglar el código o el entorno y volver a correr.
-- **Hipótesis rechazada** → es un resultado científico. Va al informe.
+- **Hipótesis rechazada** → es un resultado. Va al informe.
 - **Verificación bloqueada** → falta un prerrequisito. Se marca `blocked`; no se reporta
-  como fracaso del modelo.
+  como fracaso de lo que se construyó.
 
 ## Presets
 
-`generic` · `engineering` · `academic` · `astro-mlops`
+| Preset | Ciclo build | Para qué |
+|---|---|---|
+| `generic` | 7 pasos | Base, cualquier proyecto de software |
+| `engineering` | 7 pasos | Pipelines, ETL, ingeniería de datos |
+| `data-science` | 7 pasos | Análisis y respuestas a partir de datos |
+| `ml` | 8 pasos | Modelos; añade *Evaluación del Modelo* con model card |
+| `mvp` | 4 pasos | Prototipos y pruebas de concepto |
+| `academic` | 7 pasos | Tesis y papers |
 
-Un preset define el ciclo completo y puede renombrar pasos, mover compuertas o
-reemplazar la lista entera. `astro-mlops` extiende `academic` para detección de
-anomalías sobre telemetría, con sus scripts en `presets/astro-mlops/scripts/`:
-`validate_data_contract.py`, `inject_faults.py`, `eval_anomaly.py`.
-
-## Sobre la documentación heredada
-
-`docs/legacy/` contiene informes escritos por agentes con citas de código que no
-corresponden a ninguna versión real del repositorio. **No los uses como especificación.**
-Para saber cómo se comporta el framework, ejecútalo.
+Un preset puede renombrar pasos, mover compuertas o reemplazar el ciclo completo, y trae
+lo suyo en su propia carpeta. El núcleo no conoce ningún dominio.

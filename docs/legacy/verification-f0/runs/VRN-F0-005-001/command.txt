@@ -1,1 +1,0 @@
-specify bundle build --path "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle" --output "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\dist"

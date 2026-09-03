@@ -1,1 +1,0 @@
-C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "from specify_cli.workflows.engine import WorkflowDefinition; wf = WorkflowDefinition.from_yaml(r'C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\workflows\minimal-workflow.yml'); assert wf.id == 'minimal-workflow'"

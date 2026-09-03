@@ -1,5 +1,0 @@
-status: passed
-command_exit_code: 0
-test_runner_exit_code: 0
-observations:
-- User artifact charter.md remained 100% intact after specify extension remove ief

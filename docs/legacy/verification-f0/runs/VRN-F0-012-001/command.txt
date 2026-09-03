@@ -1,1 +1,0 @@
-C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "import os; assert os.path.exists(r'C:\Users\juanp\AppData\Local\Temp\ief_clean_env_lari11pw\charter.md')"

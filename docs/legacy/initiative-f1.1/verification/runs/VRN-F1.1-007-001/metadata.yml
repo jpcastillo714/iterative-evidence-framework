@@ -1,9 +1,0 @@
-vrn_id: VRN-F1.1-007-001
-test_id: TST-F1.1-007
-name: Pending Variables Section & PENDING Flag Check
-test_type: integration
-verification_level: executed
-command_exit_code: 0
-test_runner_exit_code: 0
-status: passed
-executed_at: '2026-08-05T16:22:57.069898'

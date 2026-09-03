@@ -1,5 +1,0 @@
-status: passed
-command_exit_code: 1
-test_runner_exit_code: 0
-observations:
-- Verified correct CLI argument syntax for specify bundle info

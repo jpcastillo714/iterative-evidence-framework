@@ -1,0 +1,51 @@
+# Preset `mvp` — producto minimo viable, prototipos y pruebas de concepto.
+#
+# El ciclo completo de 7 pasos es demasiada ceremonia cuando el objetivo es descubrir si
+# algo vale la pena. Este preset recorta a 4 pasos y una sola compuerta: lo minimo para
+# no perder trazabilidad, sin frenar el ritmo.
+#
+# Cuando el MVP se valida, el trabajo pasa a `engineering` o `ml` y recupera el ciclo
+# completo. Lo que importa es que el recorte sea una decision declarada, no un descuido:
+# los pasos que se saltan estan ausentes del ciclo, no fingidos como completados.
+
+id: mvp
+name: "MVP / Prototipo"
+description: >-
+  Ciclo corto para prototipos y pruebas de concepto. Cuatro pasos, una compuerta.
+  Cambia rigor por velocidad de forma explicita, no por omision.
+extends: generic
+
+cycles:
+  build:
+    name: "Ciclo MVP"
+    steps:
+      - key: "1_charter"
+        ref: "1"
+        name: "Hipotesis y Criterio de Exito"
+        artifact: "charter.md"
+        human_gate: true
+        template: "core/templates/charter-template.md"
+        instructions: "core/steps/01_charter/step-instructions.md"
+
+      - key: "5_acceptance_tests"
+        ref: "2"
+        name: "Como Sabremos Si Funciona"
+        artifact: "acceptance-tests.yml"
+        human_gate: false
+        template: "core/steps/05_acceptance_tests/template.yml"
+        instructions: "core/steps/05_acceptance_tests/step-instructions.md"
+
+      - key: "6_implementation"
+        ref: "3"
+        name: "Construir"
+        artifact: null
+        human_gate: false
+        instructions: "core/steps/06_implementation/step-instructions.md"
+
+      - key: "7_verification"
+        ref: "4"
+        name: "Aprender y Decidir"
+        artifact: "increment-report.md"
+        human_gate: false
+        template: "core/templates/increment-report-template.md"
+        instructions: "core/steps/07_verification/step-instructions.md"

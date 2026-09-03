@@ -1,2 +1,0 @@
-Verification output for TST-F1.1-008
-Status: passed

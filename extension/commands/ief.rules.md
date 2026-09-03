@@ -40,14 +40,3 @@ Consultala siempre con `python core/scripts/verify_frame.py --mode status --json
    ```bash
    python core/scripts/verify_frame.py --mode advance
    ```
-
-## Si el preset es `astro-mlops`
-
-Aqui se decide **que es una anomalia y cuando el sistema tiene derecho a hablar**, no
-que modelo se usa: eso es del Paso 6.
-
-Reglas que no pueden faltar: solo canales `medicion`/`derivada` alimentan al detector;
-abstencion fuera del dominio de validez; umbral calibrado sobre nominal con cuantil
-declarado; confirmacion k-de-n; y prohibicion explicita de ajustar el umbral a posteriori.
-
-Las decisiones abiertas se listan en `decisiones_pendientes` y se resuelven **en la compuerta**.

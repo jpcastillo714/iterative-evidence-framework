@@ -19,14 +19,14 @@ from conftest import BUNDLE, correr
 
 def test_todos_los_presets_cargan(preset_mod):
     ids = preset_mod.presets_disponibles(BUNDLE)
-    assert set(ids) >= {"generic", "engineering", "academic", "astro-mlops"}
+    assert set(ids) >= {"generic", "engineering", "data-science", "ml", "mvp", "academic"}
     for pid in ids:
         preset_mod.cargar_preset(pid, BUNDLE)   # no debe lanzar
 
 
 def test_la_herencia_encadena_en_orden(preset_mod):
-    p = preset_mod.cargar_preset("astro-mlops", BUNDLE)
-    assert p.cadena == ["generic", "academic", "astro-mlops"]
+    p = preset_mod.cargar_preset("academic", BUNDLE)
+    assert p.cadena == ["generic", "academic"]
 
 
 def test_el_hijo_hereda_los_pasos_del_padre(preset_mod):
@@ -36,11 +36,28 @@ def test_el_hijo_hereda_los_pasos_del_padre(preset_mod):
 
 
 def test_rename_cambia_la_etiqueta_pero_no_la_clave(preset_mod):
-    p = preset_mod.cargar_preset("astro-mlops", BUNDLE)
+    p = preset_mod.cargar_preset("engineering", BUNDLE)
     paso = p.ciclo("build").por_clave("2_empirical_inspection")
     assert paso is not None
-    assert paso.nombre == "Auditoría de Telemetría"
+    assert paso.nombre == "Perfilado de Fuentes"
     assert paso.ref == "2"
+
+
+def test_el_preset_ml_agrega_un_paso_con_compuerta(preset_mod):
+    """Un preset puede extender el ciclo, no solo renombrarlo."""
+    p = preset_mod.cargar_preset("ml", BUNDLE)
+    refs = [s.ref for s in p.pasos("build")]
+    assert refs == ["1", "2", "3", "4", "5", "6", "6b", "7"]
+    paso = p.ciclo("build").por_ref("6b")
+    assert paso.human_gate is True
+    assert paso.artefacto == "model-card.md"
+
+
+def test_el_preset_mvp_recorta_el_ciclo(preset_mod):
+    """Y puede acortarlo: 4 pasos y una sola compuerta, declarado."""
+    p = preset_mod.cargar_preset("mvp", BUNDLE)
+    assert [s.ref for s in p.pasos("build")] == ["1", "2", "3", "4"]
+    assert [s.ref for s in p.pasos("build") if s.human_gate] == ["1"]
 
 
 def test_preset_inexistente_da_error_claro(preset_mod):
@@ -139,7 +156,8 @@ def test_cada_paso_tiene_sus_archivos_de_apoyo():
 
 
 def test_el_nucleo_no_contiene_codigo_de_dominio():
-    """astro-mlops vive en su preset. Si vuelve a `core/`, este test lo dice."""
+    """core/scripts es una lista cerrada: solo el motor. Cualquier otro script
+    es codigo de dominio y su sitio es presets/<id>/scripts/."""
     r = correr("--mode", "check-bundle")
     assert r.returncode == 0, r.stdout + r.stderr
 

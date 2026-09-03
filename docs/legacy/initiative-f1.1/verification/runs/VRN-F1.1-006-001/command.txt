@@ -1,1 +1,0 @@
-grep '## 5. Restricciones' initiative/charter.md

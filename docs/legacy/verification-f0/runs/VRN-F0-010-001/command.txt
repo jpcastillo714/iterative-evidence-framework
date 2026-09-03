@@ -1,1 +1,0 @@
-specify extension add --dev "C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\extension"

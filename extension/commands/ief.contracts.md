@@ -33,18 +33,3 @@ Consultala siempre con `python core/scripts/verify_frame.py --mode status --json
    ```bash
    python core/scripts/verify_frame.py --mode advance
    ```
-
-## Si el preset es `astro-mlops`
-
-La plantilla la resuelve el preset (`presets/astro-mlops/templates/data-contract.telemetry.yml`):
-cada canal declara su `clase` (`medicion` · `consigna` · `comando` · `ambiente` ·
-`derivada` · `descartada`), unidad, rango valido y centinelas.
-
-**El contrato no se da por COMPLETED sin ejecutarlo** contra los datos reales:
-
-```bash
-python presets/astro-mlops/scripts/validate_data_contract.py     --contract initiative/increments/<SLUG>/data-contract.yml     --data <parquet> --report 06_resultados/experimentos/contrato_report.json
-```
-
-Declarar `dominio_de_validez`: es lo que despues permite al detector abstenerse en vez
-de alarmar donde el modelo base no vale.

@@ -70,15 +70,3 @@ Compilar y ejecutar:
 python core/scripts/compile_acceptance_tests.py --increment <SLUG>
 pytest tests/generated -v
 ```
-
-## Si el preset es `astro-mlops`
-
-El bloque `presupuesto_operacional` (falsas alarmas por noche, cobertura minima, lead
-time, severidad minima detectable) **es lo que se aprueba en la compuerta**. Se acuerda
-antes de ver resultados; cambiarlo despues exige `/speckit.ief.rewind`.
-
-Si no hay historial de fallas etiquetado, construir el banco sintetico en este paso:
-
-```bash
-python presets/astro-mlops/scripts/inject_faults.py bench     --data <episodios> --column <objetivo>     --out 05_datos/benchmark_sintetico --params params.yaml
-```

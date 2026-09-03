@@ -1,0 +1,29 @@
+# Preset `data-science` — analisis, exploracion y respuestas a partir de datos.
+#
+# El producto es una respuesta defendible, no un sistema. Por eso el ciclo pone el peso
+# en el paso 2 (entender los datos antes de decidir nada) y trata la exploracion como
+# un ciclo de primera clase, no como un preambulo.
+
+id: data-science
+name: "Data Science"
+description: >-
+  Analisis exploratorio, modelado estadistico y respuestas a preguntas de negocio a
+  partir de datos. El entregable es un hallazgo con su evidencia, no un servicio.
+extends: generic
+
+cycles:
+  build:
+    rename:
+      1_charter: "Pregunta y Alcance"
+      2_empirical_inspection: "Perfilado de Datos"
+      3_data_contracts: "Esquema y Supuestos"
+      4_business_rules: "Definiciones y Metricas"
+      5_acceptance_tests: "Criterios de Validez"
+      6_implementation: "Analisis"
+      7_verification: "Hallazgos y Evidencia"
+  exploration:
+    rename:
+      1_objective: "Pregunta Exploratoria"
+      2_analysis: "Analisis Exploratorio"
+      2b_data_contract: "Formalizacion del Esquema"
+      3_findings: "Hallazgos"

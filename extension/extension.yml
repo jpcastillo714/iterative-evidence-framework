@@ -2,9 +2,9 @@ schema_version: '3.1'
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: 0.5.0
-  description: 'Extension del Iterative Evidence Framework V3: ciclos definidos por
-    el preset, compuertas humanas verificables y criterios de aceptacion ejecutables'
+  version: 0.6.0
+  description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
+    de aceptacion ejecutables
   category: process
   effect: read-write
 requires:
@@ -66,11 +66,6 @@ provides:
     - ief.verify
     description: 'Paso 7: Ejecutar la suite de verificación (build)'
     file: commands/ief.verify.md
-  - name: speckit.ief.evidence
-    aliases:
-    - ief.evidence
-    description: 'Paso 7: Ejecuta un test y emite su evidencia (VRN + enlace MLflow)'
-    file: commands/ief.evidence.md
   - name: speckit.ief.status
     aliases:
     - ief.status

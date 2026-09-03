@@ -1,6 +1,0 @@
-status: blocked
-command_exit_code: 0
-test_runner_exit_code: 0
-observations:
-- 'Blocked: Cannot dispatch command step because agy agent CLI binary is missing on
-  OS PATH'

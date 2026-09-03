@@ -174,19 +174,14 @@ def _tid(t: Dict[str, Any]) -> str:
 
 
 def validate_data_contract_shape(data: Dict[str, Any]) -> Tuple[bool, str]:
-    """Valida la estructura de un data-contract.yml en cualquiera de sus tres formas."""
-    canales = data.get("canales") or data.get("channels")
-    if canales:
-        if not isinstance(canales, dict) or not canales:
-            return False, "telemetria"
+    """Valida la estructura de un data-contract.yml en sus dos formas.
 
-        def _tiene_clase(nodo: Any) -> bool:
-            if not isinstance(nodo, dict):
-                return False
-            return "clase" in nodo or any(_tiene_clase(v) for v in nodo.values())
+    - `schemas[].fields[]`  forma de la plantilla del Paso 3
+    - `sources[].columns[]` forma clasica orientada a sistemas de origen
 
-        return any(_tiene_clase(v) for v in canales.values()), "telemetria"
-
+    Un preset puede definir su propia forma; entonces le corresponde aportar su
+    propio validador. El nucleo solo conoce las formas genericas.
+    """
     if data.get("schemas"):
         for s in data["schemas"]:
             if not isinstance(s, dict) or not s.get("name") or not s.get("fields"):
@@ -820,12 +815,18 @@ def cmd_check_bundle() -> None:
     resultados.append(("core/scripts/ief_preset.py", (BUNDLE_DIR / "core/scripts/ief_preset.py").exists()))
     resultados.append(("hay al menos un preset", bool(presets_disponibles(BUNDLE_DIR))))
 
-    # El nucleo no debe contener codigo de dominio: eso vive en su preset.
-    dominio = [
+    # El nucleo es una lista cerrada. Cualquier otro script en core/scripts/ es
+    # codigo de dominio que se colo: su sitio es presets/<id>/scripts/.
+    MODULOS_DEL_NUCLEO = {"verify_frame", "ief_preset", "compile_acceptance_tests"}
+    intrusos = sorted(
         p.name for p in (BUNDLE_DIR / "core" / "scripts").glob("*.py")
-        if p.stem in {"eval_anomaly", "inject_faults", "validate_data_contract"}
-    ]
-    resultados.append((f"core/scripts sin codigo de dominio{f' (encontrado: {dominio})' if dominio else ''}", not dominio))
+        if p.stem not in MODULOS_DEL_NUCLEO
+    )
+    resultados.append((
+        "core/scripts solo contiene el motor"
+        + (f" (intrusos: {intrusos}; su sitio es presets/<id>/scripts/)" if intrusos else ""),
+        not intrusos,
+    ))
 
     # Cada comando declarado en extension.yml debe existir.
     ext = BUNDLE_DIR / "extension" / "extension.yml"

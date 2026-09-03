@@ -1,1 +1,0 @@
-C:\Users\juanp\AppData\Local\Programs\Python\Python311\python.exe -c "import yaml; d = yaml.safe_load(open(r'C:\Users\juanp\OneDrive\Escritorio\Proyectos\spec-kit_bundle\extension\extension.yml')); assert d['schema_version'] == '1.0'; assert d['extension']['id'] == 'ief'"

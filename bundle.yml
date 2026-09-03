@@ -2,12 +2,12 @@ schema_version: "3.1"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.5.0"
+  version: "0.6.0"
   role: "framework"
   description: >-
-    Bundle del Iterative Evidence Framework V3. Ciclos build y exploration definidos
-    por el preset, compuertas humanas verificables, criterios de aceptación ejecutables
-    y promoción de incrementos a una especificación viva.
+    Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
+    humanas verificables, criterios de aceptación ejecutables y promoción de incrementos
+    a una especificación viva. El núcleo es neutral respecto al dominio.
   license: "MIT"
 
 requires:
@@ -17,19 +17,12 @@ requires:
 provides:
   extensions:
     - id: "ief"
-      version: "0.5.0"
+      version: "0.6.0"
       source: "./extension"
 
-  workflows:
-    - id: "ief-cycle-workflow"
-      version: "0.4.0"
-      source: "./workflows/ief-cycle-workflow.yml"
-    - id: "minimal-workflow"
-      version: "0.1.0"
-      source: "./workflows/minimal-workflow.yml"
-
   # ───────────────────────────────────────────────────────────────────────────
-  # El núcleo. No contiene lógica de ningún dominio: eso vive en los presets.
+  # El núcleo. Lista cerrada: cualquier otro script en core/scripts/ es código de
+  # dominio que se coló, y `--mode check-bundle` lo detecta.
   # ───────────────────────────────────────────────────────────────────────────
   tools:
     - id: "verify-frame"
@@ -41,30 +34,29 @@ provides:
     - id: "compile-acceptance-tests"
       description: "Traduce acceptance-tests.yml a un archivo pytest ejecutable."
       source: "./core/scripts/compile_acceptance_tests.py"
-    - id: "evidence-run"
-      description: "Ejecuta un comando y emite su carpeta VRN con hashes de entradas y salidas."
-      source: "./core/scripts/evidence_run.py"
 
   presets:
     - id: "generic"
       description: "Ciclo base: 7 pasos build, 4 exploration, compuertas en 1, 4 y 5."
       source: "./presets/generic"
     - id: "engineering"
-      description: "Pipelines, ETL e ingeniería de datos. Extiende generic."
+      description: "Pipelines, ETL e ingeniería de datos."
       source: "./presets/engineering"
+    - id: "data-science"
+      description: "Análisis exploratorio y respuestas a partir de datos."
+      source: "./presets/data-science"
+    - id: "ml"
+      description: "Modelos de ML. Añade el paso Evaluación del Modelo con compuerta y model card."
+      source: "./presets/ml"
+    - id: "mvp"
+      description: "Prototipos y pruebas de concepto. Ciclo corto de 4 pasos y una compuerta."
+      source: "./presets/mvp"
     - id: "academic"
-      description: "Tesis y papers, numeración 00_admin … 08_presentaciones. Extiende generic."
+      description: "Tesis y papers. Numeración 00_admin … 08_presentaciones."
       source: "./presets/academic"
-    - id: "astro-mlops"
-      description: >-
-        Detección de anomalías sobre telemetría de instrumentación. Extiende academic
-        con contratos de telemetría ejecutables, banco de fallas sintéticas, evaluación
-        por eventos y trazabilidad MLOps. Aporta sus propios scripts en
-        presets/astro-mlops/scripts/.
-      source: "./presets/astro-mlops"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Comprobaciones que deben pasar antes de publicar una versión del bundle.
+# Debe pasar entero antes de publicar una versión del bundle.
 # ─────────────────────────────────────────────────────────────────────────────
 verification:
   - "python core/scripts/verify_frame.py --mode check-bundle"

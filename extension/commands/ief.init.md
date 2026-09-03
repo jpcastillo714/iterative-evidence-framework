@@ -24,7 +24,6 @@ La estructura **la decide el preset**, no este comando.
    | `generic` | Cualquier proyecto de software o iniciativa estandar. |
    | `engineering` | Pipelines, ETL, ingenieria de datos. |
    | `academic` | Tesis, papers, experimentos (numeracion `00_admin` … `08_presentaciones`). |
-   | `astro-mlops` | Deteccion de anomalias sobre telemetria. Extiende `academic`. |
 
 2. Inicializar. Esto crea los directorios del preset, `initiative/state.yml` y
    `initiative/specs/`:

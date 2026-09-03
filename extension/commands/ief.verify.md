@@ -61,9 +61,3 @@ python core/scripts/verify_frame.py --mode merge-increment --increment <SLUG>
 El `merge` promueve las reglas del incremento a `initiative/specs/`, que es la
 especificacion **viva** del proyecto. Sin ese paso, cada incremento acumula su propia
 copia y nadie sabe cual es la regla vigente.
-
-## Si el preset es `astro-mlops`
-
-Cada test se ejecuta con `/speckit.ief.evidence`, que emite su carpeta `VRN-*` y enlaza
-el run de MLflow. Una cifra sin VRN es `PENDING`, no un resultado. Las metricas se
-producen con `presets/astro-mlops/scripts/eval_anomaly.py`, nunca a mano.
