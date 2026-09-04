@@ -13,7 +13,7 @@ python core/scripts/verify_frame.py --mode rewind \
 
 ## Cuando usarlo
 
-- La implementacion revela que una regla de negocio es infactible.
+- La implementacion revela que una regla es infactible.
 - Los datos reales no coinciden con el contrato.
 - Un criterio de aceptacion resulta no ser verificable.
 

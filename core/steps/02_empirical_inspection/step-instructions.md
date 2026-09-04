@@ -64,7 +64,7 @@ Para llevar a cabo una inspección sistemática y exhaustiva, sigue este flujo d
 
 5. **Revisar Documentación y Especificaciones:**
    * Lee cualquier archivo en `initiative/sources/` (ej. transcripciones, manuales, PDFs).
-   * Extrae requisitos clave, lógica de negocio embebida en textos y terminología específica del dominio del negocio.
+   * Extrae requisitos clave, lógica del dominio embebida en textos y terminología específica del dominio.
 
 6. **Triangulación y Actualización del Charter:**
    * Cruza la información obtenida (la realidad empírica) con lo documentado en el *Charter* (las suposiciones iniciales).

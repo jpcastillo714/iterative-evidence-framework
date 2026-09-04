@@ -10,7 +10,7 @@
 [Detalla los resultados de las pruebas de aceptación. ¿Pasaron todas? ¿Qué falló y por qué?]
 
 ## Aprendizajes (Learnings)
-* [Aprendizaje 1: Aspectos técnicos, de negocio o de proceso]
+* [Aprendizaje 1: Aspectos técnicos, de dominio o de proceso]
 * [Aprendizaje 2: Errores cometidos y cómo evitarlos]
 
 ## Recomendaciones para el Próximo Ciclo

@@ -15,7 +15,7 @@
 
 ## Objetivo
 
-El objetivo de este paso es crear el "Charter" (Acta de Constitución) de la iniciativa. Este es el documento fundacional que define de manera inequívoca el **POR QUÉ** estamos realizando este trabajo y el **QUÉ** esperamos lograr. Como agente de IA, tu responsabilidad es establecer una base sólida de información que guíe todas las decisiones posteriores en el desarrollo. El Charter proporciona un marco de referencia centralizado para evitar desviaciones del alcance y asegurar el alineamiento continuo con los objetivos de negocio.
+El objetivo de este paso es crear el "Charter" (Acta de Constitución) de la iniciativa. Este es el documento fundacional que define de manera inequívoca el **POR QUÉ** estamos realizando este trabajo y el **QUÉ** esperamos lograr. Como agente de IA, tu responsabilidad es establecer una base sólida de información que guíe todas las decisiones posteriores en el desarrollo. El Charter proporciona un marco de referencia centralizado para evitar desviaciones del alcance y asegurar el alineamiento continuo con los objetivos de la iniciativa.
 
 ## Contexto
 

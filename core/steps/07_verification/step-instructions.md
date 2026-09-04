@@ -32,7 +32,7 @@ Este es el **PASO FINAL** de cada incremento dentro del Iterative Evidence Frame
 
 1. **Verificación Dual Obligatoria:** La validación debe constar de dos partes innegociables:
    - *Verificación Automatizada:* Ejecución del script `verify_frame.py` y paso exitoso de todas las pruebas automatizadas de aceptación y unitarias.
-   - *Revisión Semántica:* Revisión subjetiva/cualitativa (por parte del agente o de un humano) para asegurar que el valor de negocio esperado realmente se entregó.
+   - *Revisión Semántica:* Revisión subjetiva/cualitativa (por parte del agente o de un humano) para asegurar que el valor esperado realmente se entregó.
 2. **Generación de Aprendizajes (Learnings):** El reporte del incremento (`increment-report.md`) DEBE incluir una sección detallada de aprendizajes: qué salió bien, qué falló, y qué prácticas deben cambiarse en el próximo ciclo.
 3. **Actualización de Índices:** El archivo central `increments/index.yml` debe ser actualizado obligatoriamente para reflejar la culminación del incremento actual.
 4. **Cierre de Estado:** El archivo `state.yml` de la iteración debe actualizarse para marcar absolutamente todos los pasos como completados.
@@ -51,7 +51,7 @@ Este es el **PASO FINAL** de cada incremento dentro del Iterative Evidence Frame
    Revisa los resultados de las pruebas. ¿Están pasando todas? ¿Aparecieron regresiones inesperadas en áreas del código que no debían ser afectadas? Si hay fallos, el incremento no puede ser verificado y se debe volver a la implementación.
 
 4. **Revisión Semántica (Semantic Review):**
-   Evalúa el resultado general del incremento: ¿El código y los artefactos generados resuelven realmente el problema original planteado en el Charter (Paso 1)? ¿El output tiene sentido funcional y de negocio?
+   Evalúa el resultado general del incremento: ¿El código y los artefactos generados resuelven realmente el problema original planteado en el Charter (Paso 1)? ¿El output tiene sentido funcional y para quien lo pidio?
 
 5. **Redacción del Reporte de Incremento:**
    Crea y redacta el archivo `increment-report.md` utilizando la plantilla oficial. Este documento debe contener obligatoriamente las siguientes secciones:

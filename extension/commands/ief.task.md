@@ -38,7 +38,7 @@ Dos pasos: `task.md` (qué se pide y cómo se comprueba) e `increment-report.md`
 ## La alarma que lleva dentro
 
 Si al escribir el paso 1 aparece una decisión que **otros van a heredar** —una definición
-de métrica, un criterio de exclusión, una regla de negocio— eso ya **no es un `task`**.
+de métrica, un criterio de exclusión, una regla del dominio— eso ya **no es un `task`**.
 
 Un `task` no tiene compuerta donde aprobar esa decisión, así que la regla acabaría
 vigente sin que nadie la mirara: exactamente el fallo que el framework existe para

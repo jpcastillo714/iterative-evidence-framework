@@ -10,7 +10,7 @@ Al operar en este proyecto, todos los agentes deben adherirse estrictamente a la
 
 * **Anti-Basura (Zero Clutter):** Prohibido dejar archivos sueltos en la raíz del proyecto. Todos los archivos, scripts de prueba o artefactos deben ubicarse en su directorio semántico correspondiente.
 * **Piensa Lento (Plan → Execute → Validate):** Nunca te saltes pasos. Primero planifica tu aproximación, luego ejecuta la tarea, y finalmente valida los resultados de forma rigurosa.
-* **Anti-Alucinación:** Bajo ninguna circunstancia inventes datos, variables, reglas de negocio o esquemas. Si falta información o es desconocida, márcala explícitamente como `PENDING` y solicita aclaración.
+* **Anti-Alucinación:** Bajo ninguna circunstancia inventes datos, variables, reglas o esquemas. Si falta información o es desconocida, márcala explícitamente como `PENDING` y solicita aclaración.
 * **Protocolo de Pasos (Step Protocol):** 
   1. Lee el archivo `state.yml` para determinar el paso actual.
   2. Carga *únicamente* las instrucciones del paso actual.

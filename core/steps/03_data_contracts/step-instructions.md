@@ -32,7 +32,7 @@ Para asegurar que los contratos de datos sean útiles y no meras ficciones, debe
 1. **Trazabilidad Absoluta:** Cada campo, propiedad o columna descrita en el contrato de datos DEBE tener una referencia rastreable a una observación documentada en el reporte de inspección del Paso 2. No se permiten atributos "huérfanos".
 2. **Tipado Basado en la Realidad, no en la Teoría:** Debes usar los tipos reales observados empíricamente, no los tipos que "deberían" ser lógicamente. Por ejemplo, si un campo representa una fecha pero el sistema actual lo transmite como un string con formato `DD-MM-YYYY`, el contrato debe declarar explícitamente que es un `string` acompañado de una regla de formato `date-time`.
 3. **Manejo Estricto de la Nulidad:** Los campos opcionales o que pueden contener valores nulos deben estar marcados explícitamente (ej. `nullable: true` o `required: false`). Si en la inspección viste al menos un registro nulo en un campo, este no puede ser requerido.
-4. **Validaciones Incorporadas:** Un contrato no es solo una lista de tipos; debe incluir reglas de validación de negocio inherentes al modelo, tales como rangos numéricos (ej. `min: 0`), enumeraciones finitas (ej. `enum: [ACTIVO, INACTIVO]`), formatos de cadena (ej. expresiones regulares para emails) e integridad referencial.
+4. **Validaciones Incorporadas:** Un contrato no es solo una lista de tipos; debe incluir reglas de validación inherentes al modelo, tales como rangos numéricos (ej. `min: 0`), enumeraciones finitas (ej. `enum: [ACTIVO, INACTIVO]`), formatos de cadena (ej. expresiones regulares para emails) e integridad referencial.
 
 ## Protocolo Detallado (Paso a Paso)
 

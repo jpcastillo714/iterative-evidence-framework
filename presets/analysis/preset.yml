@@ -10,7 +10,7 @@
 id: analysis
 name: "Analisis de Datos"
 description: >-
-  Analisis exploratorio, modelado estadistico y respuestas a preguntas de negocio.
+  Analisis exploratorio, modelado estadistico y respuestas a preguntas del dominio.
   El entregable es un hallazgo con su evidencia.
 extends: generic
 

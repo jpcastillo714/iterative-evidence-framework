@@ -52,7 +52,7 @@ la model card.
 Un número sin comparación no es un resultado. Como mínimo:
 
 - **Trivial** — clase mayoritaria, media, o persistencia (predecir el valor anterior).
-- **Simple** — regresión lineal/logística, árbol poco profundo, o una regla de negocio.
+- **Simple** — regresión lineal/logística, árbol poco profundo, o una regla explicita.
 
 Si el modelo complejo no supera claramente a la línea base simple, ese es el hallazgo:
 la complejidad no se está pagando sola.

@@ -15,7 +15,7 @@
 
 ## Objetivo
 
-El objetivo de este paso es escribir el código fuente real que da vida a la solución diseñada. La implementación debe ceñirse estrictamente al plan, respetando sin desviaciones los contratos de datos (Data Contracts), las reglas de negocio (Business Rules) y las pruebas de aceptación (Acceptance Tests) previamente definidos.
+El objetivo de este paso es escribir el código fuente real que da vida a la solución diseñada. La implementación debe ceñirse estrictamente al plan, respetando sin desviaciones los contratos de datos (Data Contracts), las reglas del incremento y las pruebas de aceptación (Acceptance Tests) previamente definidos.
 
 ## Contexto
 
@@ -25,10 +25,10 @@ El objetivo de este paso es escribir el código fuente real que da vida a la sol
 ## Reglas Críticas
 
 1. **Respeto Absoluto a los Contratos de Datos:** El código DEBE honrar los contratos de datos establecidos en el Paso 3. Si el contrato indica que un campo es anulable (nullable), el código debe manejar los nulos adecuadamente. Si indica un tipo específico o límite, la validación debe reflejarlo.
-2. **Implementación Trazable de Reglas:** El código DEBE implementar explícitamente las reglas de negocio. Cada regla (`RUL-NNN-XXX`) debe ser trazable dentro de la base de código. Esto puede lograrse mediante comentarios en funciones clave, nombres de funciones autodescriptivos o un archivo de mapeo.
+2. **Implementación Trazable de Reglas:** El código DEBE implementar explícitamente las reglas. Cada regla (`RUL-NNN-XXX`) debe ser trazable dentro de la base de código. Esto puede lograrse mediante comentarios en funciones clave, nombres de funciones autodescriptivos o un archivo de mapeo.
 3. **Pruebas Continuas (Test As You Go):** Ejecuta las pruebas de aceptación y unitarias a medida que desarrollas. No postergues la ejecución de pruebas hasta la fase de verificación. El desarrollo debe ser guiado por las pruebas.
 4. **Adherencia a Convenciones:** Sigue estrictamente las convenciones existentes del proyecto (reglas de linting, formateo de código, nomenclatura de variables, arquitectura de carpetas).
-5. **Cero Sobre-Ingeniería (No Over-engineering):** Implementa exactamente lo que dice la especificación, nada más. No añadas características especulativas ni abstracciones innecesarias que no estén justificadas por las reglas de negocio actuales.
+5. **Cero Sobre-Ingeniería (No Over-engineering):** Implementa exactamente lo que dice la especificación, nada más. No añadas características especulativas ni abstracciones innecesarias que no estén justificadas por las reglas vigentes.
 6. **Manejo de Archivos Temporales:** Cualquier archivo de prueba, script rápido o datos de descarte debe colocarse en la carpeta `scratch/`, NUNCA en el directorio fuente (`src/`).
 
 ## Protocolo Detallado (Paso a Paso)
@@ -46,7 +46,7 @@ El objetivo de este paso es escribir el código fuente real que da vida a la sol
    En paralelo a la escritura del código fuente, escribe las pruebas unitarias correspondientes en el directorio `tests/`. Las pruebas unitarias deben validar la lógica a nivel de componentes aislados.
 
 5. **Ejecución y Corrección Iterativa:**
-   Ejecuta las pruebas de aceptación automatizadas para verificar que cada regla de negocio es satisfecha. Si una prueba falla, corrige el código fuente inmediatamente.
+   Ejecuta las pruebas de aceptación automatizadas para verificar que cada regla es satisfecha. Si una prueba falla, corrige el código fuente inmediatamente.
 
 6. **Documentación de Desviaciones (Excepcional):**
    Si por razones técnicas insalvables debes desviarte de la especificación original, documenta claramente la desviación, su justificación y el impacto esperado. Esto debe ser una excepción, no la regla.
@@ -63,7 +63,7 @@ Si durante la implementación descubres que una especificación anterior es inco
 ### ¿Cuándo activar el retroceso?
 - El modelo matemático/algorítmico es infactible con las reglas definidas
 - Los datos reales no coinciden con el contrato de datos
-- Una regla de negocio es contradictoria o imposible de implementar
+- Una regla es contradictoria o imposible de implementar
 - Los tests de aceptación no son verificables con la implementación actual
 
 ### ¿Qué hacer?

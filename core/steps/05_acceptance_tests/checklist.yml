@@ -6,7 +6,7 @@ automated_checks:
     script: "test -f acceptance-tests.yml"
 manual_checks:
   - id: man-01
-    description: "Toda regla de negocio tiene al menos un test asociado."
+    description: "Toda regla tiene al menos un test asociado."
   - id: man-02
     description: "Los tests están libres de detalles técnicos de implementación."
   - id: man-03

@@ -206,3 +206,33 @@ def test_la_documentacion_no_promete_un_schema_version_que_el_motor_no_escribe()
         "la documentacion promete un schema_version que el motor no escribe "
         "(%s); el motor escribe %s" % (huerfanos, sorted(escritos))
     )
+
+
+def test_el_nucleo_no_da_por_hecho_que_el_proyecto_es_un_negocio():
+    """`core/` es compartido por todos los presets: la etiqueta la pone el preset.
+
+    El paso 4 se renombro a `4_rules` justamente porque su nombre anterior —el que el
+    test de claves de paso persigue por todo el repositorio, y que por eso no se escribe
+    aqui— no significa nada en una tesis. Pero el renombrado se quedo ahi: los
+    pasos 5, 6 y 6b siguieron diciendolo diecisiete veces. Un estudiante que abria
+    `research` leia «Reglas del Modelo» en el paso 4 y «reglas de negocio» en todos
+    los siguientes.
+
+    Solo `presets/product/` puede usar ese vocabulario, porque ahi si describe el
+    trabajo. Y `ief.rules.md` lo nombra a proposito, como ejemplo de que la etiqueta
+    la elige cada preset.
+    """
+    EXENTOS = {"ief.rules.md"}
+    culpables = []
+    for base in ("core", "extension", "presets"):
+        for ruta in (BUNDLE / base).rglob("*"):
+            if not ruta.is_file() or ruta.suffix not in {".md", ".yml"}:
+                continue
+            if ruta.name in EXENTOS or "product" in ruta.parts:
+                continue
+            if "de negocio" in ruta.read_text(encoding="utf-8", errors="ignore"):
+                culpables.append(ruta.relative_to(BUNDLE).as_posix())
+    assert not culpables, (
+        "vocabulario de `product` fuera de `product` (el nucleo lo comparten todos "
+        "los presets): %s" % culpables
+    )
