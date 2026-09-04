@@ -263,6 +263,14 @@ def preset_de(state: Dict[str, Any]) -> Preset:
         fallar(str(exc), 2)
 
 
+def layout_de(state: Dict[str, Any]) -> Layout:
+    ini = state.get("initiative") or {}
+    try:
+        return cargar_layout(ini.get("layout"), BUNDLE_DIR, ini.get("role_paths"))
+    except ErrorDePreset as exc:
+        fallar(str(exc), 2)
+
+
 def paso_actual(preset: Preset, inc: Dict[str, Any]) -> Paso:
     tipo = inc.get("type", "build")
     try:
@@ -319,7 +327,9 @@ def validate_data_contract_shape(data: Dict[str, Any]) -> Tuple[bool, str]:
     return True, "sources"
 
 
-def _validar_rules(data: Dict[str, Any]) -> List[Tuple[str, str, bool]]:
+def _validar_rules(
+    data: Dict[str, Any], dir_inc: Optional[Path] = None
+) -> List[Tuple[str, str, bool]]:
     """Una regla es normativa y verificable, y trae su justificacion dentro.
 
     `rationale` no es adorno: es lo que antes seria una bitacora de decisiones aparte,
@@ -347,6 +357,33 @@ def _validar_rules(data: Dict[str, Any]) -> List[Tuple[str, str, bool]]:
         ("Estructura", "rules.yml: cada regla tiene id RUL-* y statement", ok),
         ("Estructura", "rules.yml: IDs unicos", len(ids) == len(set(ids))),
     ]
+
+    # La evidencia citada tiene que existir. Una regla que cita `TST-ACC-042` sin que
+    # ese test exista en ningun sitio es peor que una regla sin evidencia: parece
+    # respaldada, y nadie vuelve a comprobarlo.
+    if dir_inc is not None:
+        tests_conocidos = set()
+        for f in (dir_inc, dir_inc.parent.parent / "specs"):
+            ruta = f / "acceptance-tests.yml"
+            if ruta.exists():
+                try:
+                    doc = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
+                except yaml.YAMLError:
+                    continue
+                for t in (doc.get("tests") or []):
+                    tid = t.get("test_id") or t.get("id")
+                    if tid:
+                        tests_conocidos.add(str(tid))
+        if tests_conocidos:
+            fantasmas = sorted({
+                str(e) for r in reglas for e in (r.get("evidence") or [])
+                if str(e).startswith("TST-") and str(e) not in tests_conocidos
+            })
+            res.append((
+                "Trazabilidad",
+                "la evidencia citada existe" + (" (fantasmas: %s)" % fantasmas if fantasmas else ""),
+                not fantasmas,
+            ))
     if ambitos_malos:
         res.append(("Estructura", "scope invalido en %s" % ambitos_malos, False))
     if estados_malos:
@@ -419,7 +456,7 @@ def verificar_artefacto(
         ok, forma = validate_data_contract_shape(data)
         res.append(("Estructura", f"data-contract.yml estructura valida ({forma})", ok))
     elif paso.artefacto == "rules.yml":
-        res += _validar_rules(data)
+        res += _validar_rules(data, dir_inc)
     elif paso.artefacto == "acceptance-tests.yml":
         res += _validar_acceptance_tests(data, dir_inc)
     return res
@@ -447,6 +484,10 @@ def cmd_init(
     try:
         preset = cargar_preset(preset_id, BUNDLE_DIR)
         layout = cargar_layout(layout_id, BUNDLE_DIR)
+    except ErrorDePreset as exc:
+        fallar(str(exc), 2)
+    try:
+        pass
     except ErrorDePreset as exc:
         fallar(str(exc), 2)
 
@@ -517,6 +558,231 @@ def cmd_init(
         print("       que trabajaras, y las reglas que descubras viviran debajo.")
     print()
     print("Siguiente: --mode new-increment --type build|exploration|prototype --name '...'")
+
+
+# Sinonimos por rol. No pretenden ser exhaustivos: pretenden acertar en los nombres
+# que la gente usa de verdad, en espanol y en ingles, y callarse cuando dudan. Un
+# mapeo equivocado propuesto con confianza es peor que no proponer nada.
+SINONIMOS = {
+    "datos_raw": ["raw", "crudo", "crudos", "datos_crudos", "data/raw", "originales", "fuente"],
+    "datos_interim": ["interim", "intermedio", "intermedios", "staging", "tmp_datos"],
+    "datos_processed": ["processed", "procesado", "procesados", "limpio", "clean", "curated"],
+    "exploracion": ["notebooks", "notebook", "cuadernos", "exploracion", "eda", "analisis_exploratorio"],
+    "codigo": ["src", "codigo", "lib", "app", "paquete", "source"],
+    "config": ["conf", "config", "configuracion", "settings", "params"],
+    "tests": ["tests", "test", "pruebas", "spec"],
+    "pipelines": ["pipelines", "pipeline", "etl", "flujos", "dags"],
+    "modelos": ["models", "modelos", "modelo", "checkpoints", "artifacts"],
+    "experimentos": ["experiments", "experimentos", "runs", "mlruns", "corridas"],
+    "resultados": ["resultados", "salidas", "outputs", "output", "figures", "figuras", "graficos"],
+    "avances": ["avances", "progress", "reportes", "informes", "reports"],
+    "documento": ["docs", "documento", "documentacion", "memoria", "tesis", "paper", "manuscrito"],
+    "presentaciones": ["presentaciones", "presentations", "slides", "decks", "posters"],
+    "referencias": ["referencias", "references", "bibliografia", "papers", "biblio"],
+    "metodologia": ["metodologia", "method", "methods", "diseno"],
+    "admin": ["admin", "administracion", "gestion", "00_admin"],
+    "onboarding": ["onboarding", "inicio", "empezar", "getting_started"],
+    "despliegue": ["deploy", "despliegue", "app", "api", "serving"],
+    "scratch": ["scratch", "borrador", "playground", "sandbox", "tmp"],
+}
+
+
+def _normalizar(nombre: str) -> str:
+    import unicodedata
+    n = unicodedata.normalize("NFKD", nombre.lower())
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    return re.sub(r"^\d+[_-]", "", n)          # 00_admin -> admin
+
+
+def _rol_para(ruta_rel: str) -> Optional[str]:
+    """Que rol representa esta carpeta, si es que representa alguno."""
+    norm = _normalizar(ruta_rel.replace("\\", "/"))
+    hoja = _normalizar(Path(ruta_rel).name)
+    for rol, alias in SINONIMOS.items():
+        for a in alias:
+            if norm == a or hoja == a:
+                return rol
+    for rol, alias in SINONIMOS.items():         # coincidencia parcial, mas laxa
+        for a in alias:
+            if len(a) >= 5 and (a in norm or a in hoja):
+                return rol
+    return None
+
+
+def cmd_adopt(project_dir: Path, preset_id: str, aplicar: bool) -> None:
+    """Adopta el IEF en un proyecto que ya existe, sin mover ni un archivo.
+
+    `init` impone rutas; `adopt` las descubre. La diferencia importa porque un
+    proyecto empezado ya tiene su estructura, y pedirle que la renombre para entrar
+    al framework es pedirle que reorganice su trabajo para complacer a una herramienta.
+    """
+    try:
+        preset = cargar_preset(preset_id, BUNDLE_DIR)
+    except ErrorDePreset as exc:
+        fallar(str(exc), 2)
+    catalogo = cargar_roles(BUNDLE_DIR)
+
+    if ruta_state(project_dir).exists():
+        fallar("este proyecto ya usa IEF (existe initiative/state.yml)")
+
+    # Carpetas existentes: primer nivel y un nivel mas abajo (data/raw y companía).
+    candidatas: List[str] = []
+    for d in sorted(project_dir.iterdir()):
+        if not d.is_dir() or d.name.startswith(".") or d.name in {"__pycache__"}:
+            continue
+        candidatas.append(d.name)
+        for sub in sorted(d.iterdir()):
+            if sub.is_dir() and not sub.name.startswith("."):
+                candidatas.append("%s/%s" % (d.name, sub.name))
+
+    mapeo: Dict[str, str] = {}
+    sin_uso: List[str] = []
+    fuera_del_preset: List[Tuple[str, str]] = []
+    for rel in candidatas:
+        rol = _rol_para(rel)
+        if rol and rol in preset.roles:
+            # Gana la ruta mas especifica: si `data/` y `data/raw` compiten por
+            # datos_raw, queremos la de abajo.
+            if rol not in mapeo or len(rel) > len(mapeo[rol]):
+                mapeo[rol] = rel
+        elif rol:
+            # Reconocida, pero este preset no usa ese rol. Vale la pena decirlo: suele
+            # significar que el preset elegido no es el que corresponde al proyecto.
+            fuera_del_preset.append((rel, rol))
+        else:
+            sin_uso.append(rel)
+
+    faltan = [r for r in preset.roles if r not in mapeo and r != "initiative"]
+
+    print()
+    print("[ADOPT] %s  ·  preset `%s`" % (project_dir.name, preset.id))
+    print("        Nada se mueve: solo se registra donde esta cada cosa.")
+    print()
+    if mapeo:
+        print("  Carpetas reconocidas:")
+        for rol in preset.roles:
+            if rol in mapeo:
+                print("    %-24s -> %s" % (mapeo[rol], rol))
+    if faltan:
+        print()
+        print("  Roles del preset sin carpeta (se crearan con el nombre del layout):")
+        for rol in faltan:
+            print("    %-24s    %s" % (rol, (catalogo.get(rol) or {}).get("description", "")[:44]))
+    if fuera_del_preset:
+        print()
+        print("  Reconocidas, pero el preset `%s` no usa esos roles:" % preset.id)
+        for rel, rol in fuera_del_preset:
+            print("    %-24s -> %s" % (rel, rol))
+        print("    Si las necesitas, quiza el preset que buscas es otro, o el rol")
+        print("    puede anadirse al preset (ver la skill `ief-authoring`).")
+    if sin_uso:
+        print()
+        print("  Carpetas que no supe clasificar (se dejan como estan, intactas):")
+        for x in sin_uso[:12]:
+            print("    %s" % x)
+
+    if not aplicar:
+        print()
+        print("  Esto es una propuesta. Revisala y, si te cuadra, repite con --yes.")
+        print("  Lo que no encaje se corrige despues en initiative/state.yml,")
+        print("  campo `initiative.role_paths`.")
+        print()
+        return
+
+    layout = cargar_layout("flat", BUNDLE_DIR, mapeo)
+    creados = []
+    for d in preset.directorios(layout, catalogo):
+        destino = project_dir / d["path"]
+        if not destino.exists():
+            destino.mkdir(parents=True, exist_ok=True)
+            creados.append(d["path"])
+
+    dir_specs = project_dir / preset.rutas.get("specs_dir", "initiative/specs")
+    dir_specs.mkdir(parents=True, exist_ok=True)
+    (project_dir / preset.dir_incremento("").rstrip("/")).mkdir(parents=True, exist_ok=True)
+
+    plantilla = BUNDLE_DIR / "core" / "templates" / "constitution-template.md"
+    destino_const = dir_specs / "constitution.md"
+    if plantilla.exists() and not destino_const.exists():
+        texto = plantilla.read_text(encoding="utf-8")
+        destino_const.write_text(
+            texto.replace("{{PROYECTO}}", project_dir.name).replace("{{FECHA}}", ahora()[:10]),
+            encoding="utf-8",
+        )
+
+    state = {
+        "schema_version": "4.0",
+        "initiative": {
+            "id": re.sub(r"[^A-Z0-9-]", "", project_dir.name.upper())[:24] or "PROYECTO",
+            "name": project_dir.name,
+            "preset": preset.id,
+            "layout": "flat",
+            "role_paths": mapeo,        # lo que este proyecto ya tenia, respetado
+            "adopted_at": ahora(),
+        },
+        "focus": None,
+        "max_active": MAX_ACTIVOS_POR_DEFECTO,
+        "increments": [],
+        "history": [],
+    }
+    record_history(state, "ADOPT", {"preset": preset.id, "mapeo": mapeo})
+    save_state(state, ruta_state(project_dir))
+
+    print()
+    print("  Adoptado. %d carpeta(s) existentes reconocidas, %d creada(s)."
+          % (len(mapeo), len(creados)))
+    for c in creados:
+        print("    nueva: %s" % c)
+    print()
+    print("  Siguiente: revisa initiative/specs/constitution.md y abre un incremento.")
+
+
+def cmd_log(
+    project_dir: Path, mensaje: Optional[str], salida: Optional[str],
+    origen: Optional[str],
+) -> None:
+    """Anota trabajo que NO es un incremento.
+
+    Un grafico para una reunion, un documento de avance, un arreglo de diez minutos:
+    nadie lo mantiene, no cambia ninguna regla, y montarle un ciclo seria ceremonia
+    vacia. Pero dentro de seis meses alguien encontrara ese PNG y no sabra de donde
+    salio. Una linea aqui responde eso, y cuesta cinco segundos.
+    """
+    if not mensaje:
+        fallar("--message es obligatorio: la anotacion ES el contenido")
+
+    state, state_file = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml. Ejecuta --mode init o --mode adopt primero.")
+    preset = preset_de(state)
+
+    ruta = project_dir / preset.rutas.get("worklog_file", "initiative/worklog.md")
+    if not ruta.exists():
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        ruta.write_text(
+            "# Bitacora de trabajo\n\n"
+            "Trabajo que no llego a incremento: graficos sueltos, documentos, arreglos\n"
+            "pequenos. Sin pasos ni compuertas — pero registrado, que era lo unico que\n"
+            "hacia falta.\n\n"
+            "Si algo de aqui empieza a crecer, a ser citado o a cambiar una regla del\n"
+            "proyecto, deja de pertenecer a esta lista: abrele un incremento.\n",
+            encoding="utf-8",
+        )
+
+    fecha = ahora()[:10]
+    linea = "\n- **%s** — %s\n" % (fecha, mensaje)
+    if salida:
+        linea += "  - salida: `%s`\n" % salida
+    if origen:
+        linea += "  - desde: `%s`\n" % origen
+
+    with open(ruta, "a", encoding="utf-8") as f:
+        f.write(linea)
+
+    record_history(state, "LOG", {"message": mensaje, "output": salida})
+    save_state(state, state_file)
+    print("[LOG] %s" % mensaje)
+    print("      %s" % ruta.relative_to(project_dir))
 
 
 def cmd_new_increment(
@@ -1280,6 +1546,258 @@ def cmd_merge_increment(
     print("\n[OK] %s marcado MERGED. La especificacion viva esta actualizada." % slug_real)
 
 
+def cmd_draft_report(project_dir: Path, slug: Optional[str], force: bool) -> None:
+    """Redacta el borrador del informe con lo que el motor ya sabe.
+
+    Deja en blanco, y marcados como preguntas, los aprendizajes: eso no lo puede
+    escribir una maquina y fingir que si lo hace es peor que dejar el hueco.
+    """
+    state, _ = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+
+    inc, _ = get_increment(state, slug)
+    if not inc:
+        fallar("incremento no encontrado: %s" % (slug or get_focus(state)))
+    slug_real = inc.get("slug", inc.get("id"))
+    tipo = inc.get("type", "build")
+    dir_inc = project_dir / preset.dir_incremento(slug_real)
+
+    destino = dir_inc / "increment-report.md"
+    if destino.exists() and not force:
+        fallar("ya existe %s. Usa --force-overwrite para reemplazarlo."
+               % destino.relative_to(project_dir))
+
+    L: List[str] = []
+    A = L.append
+    A("# Informe del incremento — %s" % (inc.get("name") or slug_real))
+    A("")
+    A("> Borrador generado por el motor el %s." % ahora()[:10])
+    A("> Los datos estan sacados de `state.yml` y de los artefactos; **los aprendizajes")
+    A("> los escribes tu**, porque son lo unico que no esta en ningun archivo.")
+    A("")
+    A("| | |")
+    A("|---|---|")
+    A("| Incremento | `%s` |" % slug_real)
+    A("| Ciclo | `%s` |" % tipo)
+    A("| Abierto | %s |" % str(inc.get("opened_at", "?"))[:10])
+    if inc.get("branch"):
+        A("| Rama | `%s` |" % inc["branch"])
+    dias = dias_desde(inc.get("opened_at"))
+    if dias is not None:
+        A("| Duracion | %d dia(s) |" % dias)
+    A("")
+
+    # ── Recorrido de los pasos ───────────────────────────────────────────────
+    A("## Recorrido")
+    A("")
+    A("| Paso | Estado | Aprobado por | Artefacto |")
+    A("|---|---|---|---|")
+    aprob = inc.get("approvals") or {}
+    if tipo in preset.ciclos:
+        for p in preset.pasos(tipo):
+            st = (inc.get("steps") or {}).get(p.clave, "PENDING")
+            firma = aprob.get(p.clave) or {}
+            quien = "%s (%s)" % (firma.get("approved_by"), str(firma.get("approved_at", ""))[:10]) \
+                if firma else ("— **falta**" if p.human_gate else "—")
+            art = "`%s`" % p.artefacto if p.artefacto else "—"
+            existe = "" if not p.artefacto or (dir_inc / p.artefacto).exists() else "  (ausente)"
+            A("| %s. %s | %s | %s | %s%s |" % (p.ref, p.nombre, st, quien, art, existe))
+    A("")
+
+    # ── Reglas ───────────────────────────────────────────────────────────────
+    ruta_reglas_inc = dir_inc / "rules.yml"
+    if ruta_reglas_inc.exists():
+        try:
+            doc = yaml.safe_load(ruta_reglas_inc.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            doc = {}
+        reglas = doc.get("rules") or []
+        if reglas:
+            A("## Reglas que este incremento propone")
+            A("")
+            for r in reglas:
+                A("### %s" % r.get("id", "?"))
+                A("")
+                A("%s" % r.get("statement", ""))
+                if r.get("rationale"):
+                    A("")
+                    A("**Por que:** %s" % str(r["rationale"]).strip())
+                if r.get("supersedes"):
+                    A("")
+                    A("**Reemplaza a** `%s`." % r["supersedes"])
+                if r.get("evidence"):
+                    A("")
+                    A("**Sostenida por:** %s" % ", ".join("`%s`" % e for e in r["evidence"]))
+                A("")
+        pendientes = doc.get("decisiones_pendientes") or []
+        if pendientes:
+            A("## Decisiones que quedaron abiertas")
+            A("")
+            for d in pendientes:
+                A("- **%s**" % d.get("pregunta", "?"))
+                if d.get("opciones"):
+                    A("  - opciones: %s" % ", ".join(str(o) for o in d["opciones"]))
+            A("")
+
+    # ── Criterios ────────────────────────────────────────────────────────────
+    ruta_tests = dir_inc / "acceptance-tests.yml"
+    if ruta_tests.exists():
+        try:
+            doc = yaml.safe_load(ruta_tests.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            doc = {}
+        tests = doc.get("tests") or []
+        if tests:
+            A("## Criterios de aceptacion")
+            A("")
+            A("| Test | Regla | Estado | Verificable |")
+            A("|---|---|---|---|")
+            for t in tests:
+                tid = t.get("test_id") or t.get("id") or "?"
+                verif = "si" if t.get("verify") else "**no** — sin bloque `verify`"
+                A("| `%s` | `%s` | %s | %s |"
+                  % (tid, t.get("linked_rule", "—"), t.get("status", "?"), verif))
+            A("")
+
+    # ── Historial ────────────────────────────────────────────────────────────
+    eventos = [h for h in state.get("history", []) if h.get("increment") == slug_real]
+    if eventos:
+        A("## Historial")
+        A("")
+        for h in eventos[-15:]:
+            A("- `%s` %s%s" % (str(h.get("timestamp", ""))[:16], h.get("action", "?"),
+                               "  — %s" % h["reason"] if h.get("reason") else ""))
+        A("")
+
+    # ── Lo que la maquina no puede escribir ──────────────────────────────────
+    A("---")
+    A("")
+    A("## Aprendizajes")
+    A("")
+    A("Esta es la parte que no sale de ningun archivo y la unica que servira dentro de")
+    A("un ano. Responde en concreto; \"todo bien\" no es un aprendizaje.")
+    A("")
+    A("**Que salio mejor de lo esperado, y por que.**")
+    A("")
+    A("**Que costo mas de lo previsto.** Si algo tardo el triple, di que era.")
+    A("")
+    A("**Que harias distinto en el proximo incremento.**")
+    A("")
+    A("**Que supuesto resulto falso.** De los que diste por buenos al empezar, cual se")
+    A("cayo al mirar los datos o al implementar.")
+    A("")
+    A("## Deuda que queda")
+    A("")
+    A("Lo que se dejo a medias y habria que rehacer. Anotarlo aqui es lo que evita")
+    A("descubrirlo dentro de seis meses en el peor momento.")
+    A("")
+
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text("\n".join(L), encoding="utf-8")
+    print("[BORRADOR] %s" % destino.relative_to(project_dir))
+    print("           Los datos ya estan. Escribe los aprendizajes y la deuda:")
+    print("           son la parte que ningun motor puede rellenar por ti.")
+
+
+def cmd_explain(project_dir: Path, rule_id: str) -> None:
+    """El linaje completo de una regla: de donde viene, que reemplazo, quien la sostiene.
+
+    Es la pregunta que un proyecto de meses no sabe responder: por que el sistema hace
+    esto? La informacion existe —procedencia en el id y en `_origen`, motivo en
+    `rationale`, cadena en `supersedes`, respaldo en `evidence`— pero repartida entre
+    varios archivos. Junta, deja de ser dato y pasa a ser respuesta.
+    """
+    state, _ = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+    vigentes = reglas_vigentes(project_dir, preset)
+
+    # Tambien las propuestas que aun viven dentro de un incremento.
+    propuestas: Dict[str, Dict[str, Any]] = {}
+    base_inc = project_dir / preset.dir_incremento("").rstrip("/")
+    if base_inc.exists():
+        for f in base_inc.rglob("rules.yml"):
+            try:
+                doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError:
+                continue
+            for r in (doc.get("rules") or []):
+                if r.get("id") and r["id"] not in vigentes:
+                    r = {**r, "_incremento": f.parent.name}
+                    propuestas[r["id"]] = r
+
+    todas = {**propuestas, **vigentes}
+    regla = todas.get(rule_id)
+    if not regla:
+        disponibles = ", ".join(sorted(todas)[:12]) or "ninguna"
+        fallar("no existe la regla `%s`. Conocidas: %s" % (rule_id, disponibles))
+
+    print()
+    print("  %s" % rule_id)
+    print("  " + "=" * 70)
+    print("  %s" % regla.get("statement", "(sin enunciado)"))
+    print()
+
+    estado = regla.get("status", "?")
+    ambito = regla.get("scope", "?")
+    print("  estado    : %s%s" % (estado, "   (rige todo el proyecto)" if ambito == "project"
+                                  else "   (rige solo su incremento)"))
+    if regla.get("applies_to"):
+        print("  gobierna  : %s" % regla["applies_to"])
+
+    origen = regla.get("_origen") or {}
+    if origen.get("increment"):
+        print("  nace en   : %s   (promovida el %s)"
+              % (origen["increment"], str(origen.get("merged_at", ""))[:10]))
+    elif regla.get("_incremento"):
+        print("  nace en   : %s   (todavia propuesta, sin promover)" % regla["_incremento"])
+
+    if regla.get("rationale"):
+        print()
+        print("  POR QUE EXISTE")
+        for linea in str(regla["rationale"]).strip().splitlines():
+            print("    %s" % linea.strip())
+
+    # ── Cadena hacia atras ───────────────────────────────────────────────────
+    print()
+    print("  LINAJE")
+    cadena, actual, guardas = [], regla, 0
+    while actual and actual.get("supersedes") and guardas < 20:
+        anterior = todas.get(actual["supersedes"])
+        if not anterior:
+            cadena.append(("?", actual["supersedes"], "citada pero ausente"))
+            break
+        cadena.append((anterior.get("status", "?"), anterior["id"],
+                       str(anterior.get("statement", ""))[:46]))
+        actual, guardas = anterior, guardas + 1
+    if cadena:
+        for est, rid, texto in cadena:
+            print("    reemplaza a %-14s %s" % (rid, texto))
+    else:
+        print("    es la primera regla sobre este asunto")
+
+    sucesora = next((r for r in todas.values() if r.get("supersedes") == rule_id), None)
+    if sucesora:
+        print("    SUPERADA por %-13s %s"
+              % (sucesora["id"], str(sucesora.get("statement", ""))[:46]))
+        print("    -> esta regla ya NO rige. La vigente es %s" % sucesora["id"])
+
+    # ── Que la sostiene ──────────────────────────────────────────────────────
+    ev = regla.get("evidence") or []
+    print()
+    print("  QUE LA SOSTIENE")
+    if ev:
+        for e in ev:
+            print("    %s" % e)
+    else:
+        print("    nada declarado — la regla no cita evidencia")
+
+    print()
+
+
 def cmd_doctor(project_dir: Path) -> None:
     """Diagnostico: en que estado real esta esto.
 
@@ -1458,7 +1976,8 @@ def cmd_check_steps() -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description="IEF V3 — motor de estado y verificacion")
     p.add_argument("--mode", required=True, choices=[
-        "init", "new-increment", "status", "focus", "doctor",
+        "init", "adopt", "new-increment", "log", "status", "focus", "doctor",
+        "explain", "draft-report",
         "verify-step", "check-gates", "check-preset", "check-bundle", "check-steps",
         "advance", "complete-step", "approve-step", "set-status", "rewind",
         "merge-increment",
@@ -1489,6 +2008,12 @@ def main() -> None:
     p.add_argument("--json", action="store_true", help="salida JSON (modo status)")
     p.add_argument("--dry-run", action="store_true", help="no escribe (modo merge-increment)")
     p.add_argument("--force-overwrite", action="store_true")
+    p.add_argument("--rule", help="id de la regla a explicar (modo explain)")
+    p.add_argument("--message", help="que se hizo (modo log)")
+    p.add_argument("--output", help="donde quedo el resultado (modo log)")
+    p.add_argument("--from", dest="origen", help="de donde salio (modo log)")
+    p.add_argument("--yes", action="store_true",
+                   help="aplica la propuesta de --mode adopt en vez de solo mostrarla")
     args = p.parse_args()
 
     proj = Path(args.project_dir)
@@ -1496,6 +2021,16 @@ def main() -> None:
     if args.mode == "init":
         cmd_init(proj, args.preset or "generic", args.layout or "flat",
                  args.initiative_name, args.force_overwrite)
+    elif args.mode == "adopt":
+        cmd_adopt(proj, args.preset or "generic", args.yes)
+    elif args.mode == "draft-report":
+        cmd_draft_report(proj, args.increment, args.force_overwrite)
+    elif args.mode == "explain":
+        if not args.rule:
+            fallar("--rule es obligatorio: --mode explain --rule RUL-001-001")
+        cmd_explain(proj, args.rule)
+    elif args.mode == "log":
+        cmd_log(proj, args.message, args.output, args.origen)
     elif args.mode == "new-increment":
         if not args.name:
             fallar("--name es obligatorio para new-increment")

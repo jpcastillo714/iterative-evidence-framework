@@ -96,9 +96,16 @@ class Layout:
     nombre: str
     descripcion: str
     rutas: Dict[str, str]
+    propias: Dict[str, str] = field(default_factory=dict)
 
     def ruta(self, rol: str) -> Optional[str]:
-        return self.rutas.get(rol)
+        """La ruta propia del proyecto manda sobre la del layout.
+
+        Un proyecto adoptado ya tiene sus carpetas con sus nombres; obligarle a
+        renombrarlas para entrar al framework seria pedirle que reorganice su trabajo
+        para complacer a una herramienta.
+        """
+        return self.propias.get(rol) or self.rutas.get(rol)
 
 
 @dataclass
@@ -190,7 +197,10 @@ def layouts_disponibles(bundle_dir: Path) -> List[str]:
     return sorted((_leer_yaml(path).get("layouts") or {}))
 
 
-def cargar_layout(layout_id: Optional[str], bundle_dir: Path) -> Layout:
+def cargar_layout(
+    layout_id: Optional[str], bundle_dir: Path,
+    propias: Optional[Dict[str, str]] = None,
+) -> Layout:
     layout_id = layout_id or LAYOUT_POR_DEFECTO
     path = Path(bundle_dir) / "core" / "layouts.yml"
     if not path.exists():
@@ -206,6 +216,7 @@ def cargar_layout(layout_id: Optional[str], bundle_dir: Path) -> Layout:
         nombre=cfg.get("name", layout_id),
         descripcion=cfg.get("description", ""),
         rutas=cfg.get("paths") or {},
+        propias=dict(propias or {}),
     )
 
 

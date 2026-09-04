@@ -45,6 +45,52 @@ académicos»: son un **rol** que casi todos usan.
 
 ---
 
+## ¿Esto merece un incremento?
+
+El riesgo de un framework así no es equivocarse: es **pesar tanto que se abandone**. El
+eje para decidir no es el tamaño, es la **consecuencia**.
+
+| Pregunta | Si es que sí |
+|---|---|
+| ¿Alguien va a **citar** este número? | Necesita evidencia reproducible |
+| ¿Alguien más va a **mantener** esto? | Necesita especificación |
+| ¿**Cambia una regla** del proyecto? | Necesita el ciclo entero |
+| ¿Ninguna de las tres? | **Hazlo y anótalo** |
+
+| Nivel | Cuándo | Coste |
+|---|---|---|
+| `--mode log` | Un gráfico, un documento, un arreglo de diez minutos | Una línea en `worklog.md` |
+| ciclo `task` | Código pequeño; nadie hereda decisiones nuevas | 2 pasos, sin compuertas |
+| ciclo `prototype` | Hay una hipótesis que puede fallar | 4 pasos, 1 compuerta |
+| ciclo `build` | Otros dependerán de esto | 7 pasos, 3 compuertas |
+
+```bash
+python $IEF/verify_frame.py --mode log     --message "gráfico de margen por categoría para el comité"     --output reports/figures/margen_cat.png --from notebooks/03_margen.ipynb
+```
+
+## Adoptar el IEF en un proyecto que ya existe
+
+`init` impone rutas; sobre un proyecto empezado crearía una estructura **paralela**.
+`adopt` hace lo contrario: descubre las rutas que ya hay y **no mueve un solo archivo**.
+
+```bash
+python $IEF/verify_frame.py --mode adopt --preset analysis         # propone
+python $IEF/verify_frame.py --mode adopt --preset analysis --yes   # aplica
+```
+
+```
+  Carpetas reconocidas:
+    src                      -> codigo
+    notebooks                -> exploracion
+    datos_crudos             -> datos_raw
+    salidas                  -> resultados
+
+  Carpetas que no supe clasificar (se dejan como estan, intactas):
+    cosas_raras
+```
+
+Lo reconocido se guarda en `initiative.role_paths` y manda sobre el layout.
+
 ## Instalación
 
 ```bash
@@ -90,7 +136,33 @@ python $IEF/verify_frame.py --mode merge-increment --increment 001_ingesta_de_ve
 
 # En cualquier momento: qué está mal
 python $IEF/verify_frame.py --mode doctor
+
+# Por qué el sistema hace esto
+python $IEF/verify_frame.py --mode explain --rule RUL-003-001
+
+# El informe del incremento, con lo que el motor ya sabe
+python $IEF/verify_frame.py --mode draft-report --increment 001_ingesta_de_ventas
 ```
+
+### `explain`: el linaje de una regla
+
+```
+  RUL-001-001
+  ======================================================================
+  Un pedido sin cliente se descarta
+
+  estado    : superseded   (rige todo el proyecto)
+  nace en   : 001_ingesta   (promovida el 2026-09-03)
+
+  POR QUE EXISTE
+    El 3% del historico no tiene cliente y son pruebas del ERP
+
+  LINAJE
+    SUPERADA por RUL-002-001   Un pedido sin cliente NO se descarta...
+    -> esta regla ya NO rige. La vigente es RUL-002-001
+```
+
+Responde la pregunta más cara de un proyecto de meses: *¿por qué el sistema hace esto?*
 
 ---
 

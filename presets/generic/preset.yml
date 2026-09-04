@@ -180,3 +180,34 @@ cycles:
         human_gate: false
         template: "core/templates/increment-report-template.md"
         instructions: "core/steps/07_verification/step-instructions.md"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Ciclo `task` — trabajo real pero pequeno.
+  #
+  # El hueco que faltaba: anadir un filtro a un dashboard es codigo de verdad, lo va
+  # a mantener alguien, y merece saber que debe hacer y como se comprueba. Pero no
+  # merece charter con criterio de abandono, ni contrato de datos, ni promocion de
+  # reglas al proyecto.
+  #
+  # Dos pasos, ninguna compuerta. Si al escribir el paso 1 descubres que hacen falta
+  # decisiones que otros van a heredar, eso ya no es un `task`: cierralo y abre un
+  # `prototype` o un `build`.
+  # ───────────────────────────────────────────────────────────────────────────
+  task:
+    name: "Ciclo Task"
+    steps:
+      - key: "1_task"
+        ref: "1"
+        name: "Qué se pide y cómo se comprueba"
+        artifact: "task.md"
+        human_gate: false
+        template: "core/templates/task-template.md"
+        instructions: "core/steps/task/step-instructions.md"
+
+      - key: "7_verification"
+        ref: "2"
+        name: "Hecho"
+        artifact: "increment-report.md"
+        human_gate: false
+        template: "core/templates/increment-report-template.md"
+        instructions: "core/steps/07_verification/step-instructions.md"

@@ -52,16 +52,17 @@ def test_preset_inexistente_da_error_claro(preset_mod):
 
 # ─── Los tres ciclos ─────────────────────────────────────────────────────────
 
-def test_todo_preset_ofrece_los_tres_ciclos(preset_mod):
+def test_todo_preset_ofrece_la_escala_completa_de_ciclos(preset_mod):
     """El rigor es una propiedad del trabajo, no del proyecto.
 
-    Antes `mvp` era un preset, lo que obligaba a elegir "soy un proyecto MVP" de una
-    vez y para siempre. Ahora cualquier proyecto abre un incremento `prototype` cuando
-    la pregunta es "esto funciona?" y uno `build` cuando ya es "esto tiene que aguantar".
+    Antes `mvp` era un preset, lo que obligaba a elegir "soy un proyecto MVP" de una vez
+    y para siempre. Ahora cualquier proyecto elige por incremento, y la escala llega
+    hasta abajo: `task` para codigo pequeno, y `--mode log` para lo que ni siquiera es
+    un incremento.
     """
     for pid in ("generic", "research", "product", "analysis"):
         p = preset_mod.cargar_preset(pid, BUNDLE)
-        assert set(p.tipos_de_ciclo()) == {"build", "exploration", "prototype"}, pid
+        assert set(p.tipos_de_ciclo()) == {"build", "exploration", "prototype", "task"}, pid
 
 
 def test_el_ciclo_prototype_recorta_y_lo_declara(preset_mod):

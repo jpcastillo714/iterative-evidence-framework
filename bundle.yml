@@ -2,7 +2,7 @@ schema_version: "3.1"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.7.0"
+  version: "0.8.0"
   role: "framework"
   description: >-
     Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
@@ -17,7 +17,7 @@ requires:
 provides:
   extensions:
     - id: "ief"
-      version: "0.7.0"
+      version: "0.8.0"
       source: "./extension"
 
   # ───────────────────────────────────────────────────────────────────────────
