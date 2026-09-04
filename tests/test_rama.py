@@ -26,8 +26,14 @@ def _repo(tmp_path, rama="main"):
     d = tmp_path / "proj"
     d.mkdir()
     subprocess.run(["git", "init", "-q", "-b", rama, str(d)], check=True)
-    subprocess.run(["git", "-C", str(d), "commit", "-q", "--allow-empty", "-m", "x"],
-                   check=True, capture_output=True)
+    # La identidad va explicita: un runner de CI limpio no tiene user.name ni
+    # user.email configurados y `git commit` falla con codigo 128.
+    subprocess.run(
+        ["git", "-C", str(d),
+         "-c", "user.name=test", "-c", "user.email=test@example.invalid",
+         "commit", "-q", "--allow-empty", "-m", "x"],
+        check=True, capture_output=True,
+    )
     r = correr("--mode", "init", "--project-dir", str(d), "--preset", "generic",
                "--layout", "flat", "--initiative-name", "P")
     assert r.returncode == 0, r.stderr
