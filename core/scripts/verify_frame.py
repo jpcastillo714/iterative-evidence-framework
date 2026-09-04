@@ -889,6 +889,56 @@ def cmd_advance(project_dir: Path) -> None:
         print(f"          artefacto: {ruta}")
 
 
+def cmd_complete_step(project_dir: Path, slug: Optional[str], ref: Optional[str]) -> None:
+    """Marca el paso actual como COMPLETED, verificando antes su artefacto.
+
+    Existia un hueco entre dos reglas del framework: `state.yml` no se edita a mano,
+    pero el motor no ofrecia ninguna forma de marcar un paso como terminado, asi que
+    las instrucciones de los comandos decian "marcalo en state.yml". Una regla que la
+    herramienta obliga a incumplir no se sostiene, y encima deja al agente editando a
+    mano el archivo mas delicado del proyecto.
+    """
+    state, state_file = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+
+    inc, idx = get_increment(state, slug)
+    if not inc:
+        fallar("incremento no encontrado: %s" % (slug or get_focus(state)))
+    tipo = inc.get("type", "build")
+    paso = preset.ciclo(tipo).por_ref(str(ref)) if ref else paso_actual(preset, inc)
+    if paso is None:
+        fallar("paso `%s` invalido para el ciclo `%s`" % (ref, tipo))
+
+    # Se verifica antes de dar por hecho: marcar COMPLETED un paso cuyo artefacto no
+    # existe convierte el estado en una ficcion, y el resto del ciclo confia en el.
+    problemas = [
+        n for _, n, ok in verificar_artefacto(preset, inc.get("slug", ""), paso, project_dir)
+        if not ok
+    ]
+    if problemas:
+        fallar("el paso %s no se puede dar por terminado:\n       - %s"
+               % (paso.ref, "\n       - ".join(problemas)))
+
+    pasos = inc.setdefault("steps", {})
+    if pasos.get(paso.clave) == "APPROVED":
+        fallar("el paso %s ya esta APPROVED; no tiene sentido volver a COMPLETED" % paso.ref)
+
+    pasos[paso.clave] = "COMPLETED"
+    state["increments"][idx] = inc
+    record_history(state, "COMPLETE_STEP", {
+        "increment": inc.get("slug"), "step": paso.ref,
+    })
+    save_state(state, state_file)
+    print("[COMPLETED] paso %s: %s" % (paso.ref, paso.nombre))
+    if paso.human_gate:
+        print("            lleva compuerta: pide aprobacion al usuario y registrala con")
+        print("            --mode approve-step --by \"<usuario>\"")
+    else:
+        print("            --mode advance para pasar al siguiente")
+
+
 def cmd_approve_step(project_dir: Path, actor: Optional[str]) -> None:
     state, state_file = load_state(project_dir)
     if not state:
@@ -1410,7 +1460,8 @@ def main() -> None:
     p.add_argument("--mode", required=True, choices=[
         "init", "new-increment", "status", "focus", "doctor",
         "verify-step", "check-gates", "check-preset", "check-bundle", "check-steps",
-        "advance", "approve-step", "set-status", "rewind", "merge-increment",
+        "advance", "complete-step", "approve-step", "set-status", "rewind",
+        "merge-increment",
     ])
     p.add_argument("--project-dir", default=os.getcwd())
     p.add_argument("--preset", help="id del preset (modo init / check-preset)")
@@ -1467,6 +1518,8 @@ def main() -> None:
         cmd_check_steps()
     elif args.mode == "advance":
         cmd_advance(proj)
+    elif args.mode == "complete-step":
+        cmd_complete_step(proj, args.increment, args.step)
     elif args.mode == "approve-step":
         cmd_approve_step(proj, args.by)
     elif args.mode == "set-status":

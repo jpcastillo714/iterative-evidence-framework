@@ -28,7 +28,8 @@ Consultala siempre con `python core/scripts/verify_frame.py --mode status --json
    ```bash
    python core/scripts/verify_frame.py --mode verify-step --step 6
    ```
-4. Marcar el paso como `COMPLETED` en `state.yml`.
+4. Cerrar el paso con el motor (verifica el artefacto antes de darlo por hecho):
+   `python core/scripts/verify_frame.py --mode complete-step`
 5. Avanzar:
    ```bash
    python core/scripts/verify_frame.py --mode advance
