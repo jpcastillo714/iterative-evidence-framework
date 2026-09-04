@@ -187,3 +187,28 @@ def test_no_quedan_referencias_a_archivos_borrados():
             if not (ruta.parent / destino).exists() and not (BUNDLE / destino).exists():
                 rotos.append(f"{ruta.relative_to(BUNDLE)} -> {destino}")
     assert not rotos, f"enlaces rotos en la documentacion: {rotos}"
+
+
+def test_la_documentacion_no_promete_un_schema_version_que_el_motor_no_escribe():
+    """La misma clase de fallo que `2_inspection`: una cadena repetida en dos sitios.
+
+    `ief.init.md` decia que state.yml sale con `schema_version: "3.1"` mientras el motor
+    llevaba tiempo escribiendo "4.0". Un agente que siga el comando al pie de la letra
+    comprueba ese valor, no lo encuentra, y concluye que la inicializacion fallo cuando
+    habia ido bien.
+    """
+    motor = (BUNDLE / "core" / "scripts" / "verify_frame.py").read_text(encoding="utf-8")
+    escritos = set(re.findall(r'"schema_version":\s*"([\d.]+)"', motor))
+    assert escritos, "el motor ya no escribe schema_version en ningun sitio"
+
+    prometidos = set()
+    for ruta in _archivos("*.md"):
+        for v in re.findall(r'state\.yml[^\n]*?schema_version:\s*"([\d.]+)"', ruta.read_text(
+                encoding="utf-8", errors="ignore")):
+            prometidos.add((ruta.relative_to(BUNDLE).as_posix(), v))
+
+    huerfanos = [(f, v) for f, v in prometidos if v not in escritos]
+    assert not huerfanos, (
+        "la documentacion promete un schema_version que el motor no escribe "
+        "(%s); el motor escribe %s" % (huerfanos, sorted(escritos))
+    )

@@ -68,7 +68,7 @@ incremento con `--type build | exploration | prototype`.
 
 ## Postcondiciones
 
-- Existe `initiative/state.yml` con `schema_version: "3.1"` y la lista de incrementos vacia.
+- Existe `initiative/state.yml` con `schema_version: "4.0"` y la lista de incrementos vacia.
 - Existen los directorios que declara el preset elegido.
 
 

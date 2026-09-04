@@ -1,26 +1,38 @@
-schema_version: "3.1"
+schema_version: "1.0"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.8.0"
+  version: "0.9.0"
   role: "framework"
   description: >-
     Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
     humanas verificables, criterios de aceptación ejecutables y promoción de incrementos
     a una especificación viva. El núcleo es neutral respecto al dominio.
+  author: "Juan Pablo Castillo"
   license: "MIT"
 
 requires:
-  speckit_version: ">=0.16.0"
+  # Validado contra el modelo de manifiesto de spec-kit v1.0.4.
+  speckit_version: ">=1.0.0"
+  tools: []
+  mcp: []
   python: ">=3.10"
 
 provides:
   extensions:
     - id: "ief"
-      version: "0.8.0"
+      version: "0.9.0"
       source: "./extension"
 
   # ───────────────────────────────────────────────────────────────────────────
+  # `tools` y `catalogs` son claves NUESTRAS, no de spec-kit.
+  #
+  # spec-kit solo instala cuatro tipos de componente —extensions, presets, steps,
+  # workflows— y lo que no reconoce lo ignora sin decir nada. Estas dos listas no
+  # se instalan: viajan dentro de ./extension. Sirven de inventario cerrado para
+  # nuestra propia higiene (tests/test_higiene.py), que detecta cualquier script
+  # o catálogo que se cuele sin declararse.
+  #
   # El núcleo. Lista cerrada: cualquier otro script en core/scripts/ es código de
   # dominio que se coló, y `--mode check-bundle` lo detecta.
   # ───────────────────────────────────────────────────────────────────────────
@@ -37,18 +49,33 @@ provides:
 
   presets:
     - id: "generic"
-      description: "Ciclo base: build (7 pasos), exploration (4) y prototype (4)."
+      version: "0.9.0"
+      priority: 10
+      strategy: "replace"
+      description: "Ciclo base: task (2 pasos), exploration (4), prototype (4) y build (7)."
       source: "./presets/generic"
     - id: "research"
+      version: "0.9.0"
+      priority: 20
+      strategy: "append"
       description: "Tesis, memorias y papers. El entregable es un documento defendible."
       source: "./presets/research"
     - id: "product"
+      version: "0.9.0"
+      priority: 20
+      strategy: "append"
       description: "Sistemas que se despliegan y alguien mantiene."
       source: "./presets/product"
     - id: "analysis"
+      version: "0.9.0"
+      priority: 20
+      strategy: "append"
       description: "Responder preguntas con datos. El entregable es un hallazgo."
       source: "./presets/analysis"
     - id: "modeling"
+      version: "0.9.0"
+      priority: 30
+      strategy: "append"
       description: "Mixin componible: anade la Evaluacion del Modelo con compuerta y model card."
       source: "./presets/modeling"
 
@@ -61,6 +88,8 @@ provides:
     - id: "layouts"
       description: "Como se llaman las carpetas de cada rol: flat | numbered."
       source: "./core/layouts.yml"
+
+tags: ["incremental", "evidence", "research", "data-science", "ml", "spec-driven"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Debe pasar entero antes de publicar una versión del bundle.

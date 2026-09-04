@@ -1,14 +1,17 @@
-schema_version: '3.1'
+schema_version: "1.0"
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: 0.8.0
+  version: "0.9.0"
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
   effect: read-write
+  author: "Juan Pablo Castillo"
+  repository: "https://github.com/jpcastillo714/iterative-evidence-framework"
+  license: MIT
 requires:
-  speckit_version: '>=0.16.0'
+  speckit_version: ">=1.0.0"
 provides:
   commands:
   - name: speckit.ief.init
@@ -19,7 +22,7 @@ provides:
   - name: speckit.ief.explore
     aliases:
     - ief.explore
-    description: Inicia un incremento ligero de exploración (3+1 pasos)
+    description: Inicia un incremento ligero de exploración (4 pasos, sin compuertas)
     file: commands/ief.explore.md
   - name: speckit.ief.pause
     aliases:
