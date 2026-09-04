@@ -2,7 +2,7 @@ schema_version: "1.0"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.9.0"
+  version: "0.10.0"
   role: "framework"
   description: >-
     Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
@@ -21,7 +21,7 @@ requires:
 provides:
   extensions:
     - id: "ief"
-      version: "0.9.0"
+      version: "0.10.0"
       source: "./extension"
 
   # ───────────────────────────────────────────────────────────────────────────
@@ -47,35 +47,38 @@ provides:
       description: "Traduce acceptance-tests.yml a un archivo pytest ejecutable."
       source: "./core/scripts/compile_acceptance_tests.py"
 
-  presets:
+  # ───────────────────────────────────────────────────────────────────────────
+  # OJO: esto NO son `presets` de spec-kit, y por eso no se declaran como tales.
+  #
+  # Un preset de spec-kit es un paquete que REEMPLAZA plantillas de comando
+  # (speckit.specify, speckit.plan...). Un preset del IEF define EL CICLO DE
+  # TRABAJO: que pasos hay, cuales llevan compuerta, que artefacto produce cada
+  # uno y con que vocabulario se llaman. Son conceptos sin relacion que comparten
+  # nombre. Declararlos bajo `provides.presets` hacia que `specify preset add`
+  # los tomara por paquetes de plantillas y fallara con
+  # `Missing required field: schema_version`.
+  #
+  # Se quedan aqui, bajo una clave nuestra, porque los lee nuestro motor.
+  # ───────────────────────────────────────────────────────────────────────────
+  cycles:
     - id: "generic"
-      version: "0.9.0"
-      priority: 10
-      strategy: "replace"
+      version: "0.10.0"
       description: "Ciclo base: task (2 pasos), exploration (4), prototype (4) y build (7)."
       source: "./presets/generic"
     - id: "research"
-      version: "0.9.0"
-      priority: 20
-      strategy: "append"
+      version: "0.10.0"
       description: "Tesis, memorias y papers. El entregable es un documento defendible."
       source: "./presets/research"
     - id: "product"
-      version: "0.9.0"
-      priority: 20
-      strategy: "append"
+      version: "0.10.0"
       description: "Sistemas que se despliegan y alguien mantiene."
       source: "./presets/product"
     - id: "analysis"
-      version: "0.9.0"
-      priority: 20
-      strategy: "append"
+      version: "0.10.0"
       description: "Responder preguntas con datos. El entregable es un hallazgo."
       source: "./presets/analysis"
     - id: "modeling"
-      version: "0.9.0"
-      priority: 30
-      strategy: "append"
+      version: "0.10.0"
       description: "Mixin componible: anade la Evaluacion del Modelo con compuerta y model card."
       source: "./presets/modeling"
 

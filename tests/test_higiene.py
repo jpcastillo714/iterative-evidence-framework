@@ -129,16 +129,6 @@ def test_no_hay_binarios_ni_ofimatica():
 
 # ─── Coherencia de los manifiestos ───────────────────────────────────────────
 
-def test_bundle_yml_declara_los_presets_que_existen():
-    import yaml
-    doc = yaml.safe_load((BUNDLE / "bundle.yml").read_text(encoding="utf-8"))
-    declarados = {p["id"] for p in doc["provides"]["presets"]}
-    en_disco = {d.name for d in (BUNDLE / "presets").iterdir() if (d / "preset.yml").exists()}
-    assert declarados == en_disco, (
-        f"bundle.yml declara {sorted(declarados)} pero en disco hay {sorted(en_disco)}"
-    )
-
-
 def test_bundle_yml_declara_las_herramientas_que_existen():
     import yaml
     doc = yaml.safe_load((BUNDLE / "bundle.yml").read_text(encoding="utf-8"))

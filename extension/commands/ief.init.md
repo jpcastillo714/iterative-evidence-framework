@@ -1,6 +1,6 @@
 ---
 name: "ief.init"
-description: "Inicializa el entorno IEF V3 en un proyecto"
+description: "Inicializa el entorno IEF en un proyecto"
 step_number: null
 ---
 

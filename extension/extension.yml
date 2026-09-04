@@ -2,7 +2,7 @@ schema_version: "1.0"
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: "0.9.0"
+  version: "0.10.0"
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
@@ -17,7 +17,7 @@ provides:
   - name: speckit.ief.init
     aliases:
     - ief.init
-    description: Inicializa IEF V3 en el proyecto (scaffold, state.yml, templates)
+    description: Inicializa el IEF en el proyecto (scaffold, state.yml, templates)
     file: commands/ief.init.md
   - name: speckit.ief.explore
     aliases:
@@ -52,7 +52,7 @@ provides:
   - name: speckit.ief.rules
     aliases:
     - ief.rules
-    description: 'Paso 4: Codificar reglas de negocio (build)'
+    description: 'Paso 4: Codificar las reglas del incremento (build)'
     file: commands/ief.rules.md
   - name: speckit.ief.tests
     aliases:
@@ -72,7 +72,7 @@ provides:
   - name: speckit.ief.status
     aliases:
     - ief.status
-    description: Verifica el estado actual de los incrementos en IEF V3
+    description: Verifica el estado actual de los incrementos en el proyecto
     file: commands/ief.status.md
   - name: speckit.ief.next
     aliases:
@@ -94,6 +94,31 @@ provides:
     - ief.doctor
     description: Diagnostica bloqueos, conflictos y olvidos del proyecto
     file: commands/ief.doctor.md
+  - name: speckit.ief.adopt
+    aliases:
+    - ief.adopt
+    description: Adopta el IEF en un proyecto que ya existe, sin mover ningun archivo
+    file: commands/ief.adopt.md
+  - name: speckit.ief.log
+    aliases:
+    - ief.log
+    description: Anota trabajo que no merece un incremento (un grafico, un documento)
+    file: commands/ief.log.md
+  - name: speckit.ief.task
+    aliases:
+    - ief.task
+    description: "Abre un incremento minimo: 2 pasos, ninguna compuerta"
+    file: commands/ief.task.md
+  - name: speckit.ief.explain
+    aliases:
+    - ief.explain
+    description: "El linaje de una regla: de donde viene, que reemplazo, quien la sostiene"
+    file: commands/ief.explain.md
+  - name: speckit.ief.report
+    aliases:
+    - ief.report
+    description: Redacta el borrador del informe del incremento con lo que el motor sabe
+    file: commands/ief.report.md
   - name: speckit.ief.constitution
     aliases:
     - ief.constitution

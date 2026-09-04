@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IEF V3 · Compilador de tests de aceptacion.
+IEF · Compilador de tests de aceptacion.
 
 Que resuelve
 ------------
@@ -244,7 +244,7 @@ def compilar(
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Compila acceptance-tests.yml a un archivo pytest ejecutable (IEF V3)"
+        description="Compila acceptance-tests.yml a un archivo pytest ejecutable"
     )
     p.add_argument("--project-dir", default=".")
     p.add_argument("--increment", help="slug del incremento (por defecto, el activo)")

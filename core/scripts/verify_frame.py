@@ -231,6 +231,46 @@ def reglas_vigentes(project_dir: Path, preset: Preset) -> Dict[str, Dict[str, An
     return {r["id"]: r for r in (doc.get("rules") or []) if r.get("id")}
 
 
+def rama_actual(project_dir: Path) -> Optional[str]:
+    """La rama de git del proyecto, o None si no hay repositorio o no hay git.
+
+    Nunca lanza: que el proyecto no use git es normal, no un error, y el motor no
+    puede volverse inutil por eso.
+    """
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(project_dir), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    rama = r.stdout.strip()
+    return rama or None
+
+
+def avisar_si_la_rama_no_cuadra(project_dir: Path, inc: Dict[str, Any]) -> None:
+    """Avisa si el incremento declara una rama y estas en otra.
+
+    Solo avisa cuando hay las dos cosas: una rama declarada y una rama real distinta.
+    Un incremento sin `--branch` no dice nada, porque no prometio nada.
+    """
+    declarada = inc.get("branch")
+    if not declarada:
+        return
+    actual = rama_actual(project_dir)
+    if actual is None or actual == declarada:
+        return
+    print("[!] El incremento %s declara la rama `%s` y estas en `%s`."
+          % (inc.get("slug", inc.get("id", "?")), declarada, actual))
+    print("    Lo que hagas ahora quedara anotado en ese incremento pero vivira en")
+    print("    esta otra rama. Cambia de rama, o corrige la declarada con:")
+    print("      --mode set-status --increment %s --branch %s"
+          % (inc.get("slug", "<slug>"), actual))
+
+
 def avisar_si_cambiaron_las_reglas(
     project_dir: Path, preset: Preset, inc: Dict[str, Any]
 ) -> None:
@@ -1113,6 +1153,7 @@ def cmd_advance(project_dir: Path) -> None:
     inc, idx = get_increment(state, None)
     if not inc:
         fallar("no hay incremento activo")
+    avisar_si_la_rama_no_cuadra(project_dir, inc)
 
     tipo = inc.get("type", "build")
     ciclo = preset.ciclo(tipo)
@@ -1260,12 +1301,12 @@ def _ciclo_de_dependencias(
 def cmd_set_status(
     project_dir: Path, slug: Optional[str], status: str, reason: Optional[str],
     blocked_kind: Optional[str], blocked_on: Optional[str], expected: Optional[str],
-    mover_foco: bool,
+    mover_foco: bool, rama: Optional[str] = None,
 ) -> None:
     state, state_file = load_state(project_dir)
     if not state:
         fallar("no existe initiative/state.yml")
-    if status not in INCREMENT_STATUS:
+    if status and status not in INCREMENT_STATUS:
         fallar("estado invalido. Validos: %s" % ", ".join(INCREMENT_STATUS))
     preset = preset_de(state)
 
@@ -1273,6 +1314,14 @@ def cmd_set_status(
     if not inc:
         fallar("incremento no encontrado: %s" % slug)
     slug_real = inc.get("slug", inc.get("id"))
+
+    # Corregir la rama declarada sin tener que abrir otro incremento: el nombre de la
+    # rama cambia en la vida real (se renombra, se rehace) y el estado tiene que poder
+    # seguirle el paso.
+    if rama:
+        anterior = inc.get("branch")
+        inc["branch"] = rama
+        print("[RAMA] %s: %s -> %s" % (slug_real, anterior or "(ninguna)", rama))
 
     if status == "PAUSED":
         # Voluntario: tu decidiste parar. No depende de nadie mas.
@@ -1332,13 +1381,18 @@ def cmd_set_status(
                 set_focus(state, siguiente)
                 print("  [i] el foco pasa a %s" % siguiente)
 
-    inc["status"] = status
+    # Con solo `--branch` no hay estado que cambiar: escribirlo pondria None y
+    # dejaria el incremento sin estado valido.
+    if status:
+        inc["status"] = status
     state["increments"][idx] = inc
     record_history(state, "SET_STATUS", {
-        "increment": slug_real, "status": status, "reason": reason,
+        "increment": slug_real, "status": status or inc.get("status"),
+        "reason": reason, "branch": rama,
     })
     save_state(state, state_file)
-    print("[STATUS] %s -> %s" % (slug_real, status))
+    if status:
+        print("[STATUS] %s -> %s" % (slug_real, status))
 
     if status == "ACTIVE":
         avisar_si_cambiaron_las_reglas(project_dir, preset, inc)
@@ -1825,6 +1879,17 @@ def cmd_doctor(project_dir: Path) -> None:
                 problemas.append("%s esta bloqueado por `%s`, que no existe"
                                  % (inc.get("slug"), bloqueo.get("on")))
 
+    # 1b. La rama declarada frente a la real.
+    rama = rama_actual(project_dir)
+    if rama:
+        for inc in incs:
+            if inc.get("status") != "ACTIVE" or not inc.get("branch"):
+                continue
+            if inc["branch"] != rama and state.get("focus") == inc.get("slug"):
+                avisos.append(
+                    "%s (enfocado) declara la rama `%s` pero estas en `%s`"
+                    % (inc.get("slug"), inc["branch"], rama))
+
     # 2. Bloqueos vencidos o rancios.
     for inc in incs:
         bloqueo = inc.get("blocked") or {}
@@ -1974,7 +2039,7 @@ def cmd_check_steps() -> None:
 # ─── CLI ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="IEF V3 — motor de estado y verificacion")
+    p = argparse.ArgumentParser(description="IEF - motor de estado y verificacion")
     p.add_argument("--mode", required=True, choices=[
         "init", "adopt", "new-increment", "log", "status", "focus", "doctor",
         "explain", "draft-report",
@@ -1987,9 +2052,11 @@ def main() -> None:
     p.add_argument("--layout", help="como se nombran las carpetas: flat | numbered")
     p.add_argument("--initiative-name", default="Nueva Iniciativa")
     p.add_argument("--type", dest="tipo", default="build",
-                   help="ciclo del incremento: build | exploration | prototype")
+                   help="ciclo del incremento: task | exploration | prototype | build")
     p.add_argument("--name", help="nombre del incremento (modo new-increment)")
-    p.add_argument("--branch", help="rama git asociada al incremento")
+    p.add_argument("--branch",
+                   help="rama git del incremento (modo new-increment, o set-status "
+                        "para corregirla)")
     p.add_argument("--step", help="ref del paso (1, 2b, 7...)")
     p.add_argument("--increment", help="slug del incremento")
     p.add_argument("--status", help="nuevo estado del incremento")
@@ -2058,11 +2125,11 @@ def main() -> None:
     elif args.mode == "approve-step":
         cmd_approve_step(proj, args.by)
     elif args.mode == "set-status":
-        if not args.status:
-            fallar("--status es obligatorio")
+        if not args.status and not args.branch:
+            fallar("--status es obligatorio (o --branch para solo corregir la rama)")
         cmd_set_status(proj, args.increment, args.status, args.reason,
                        args.blocked_kind, args.blocked_on, args.expected,
-                       args.mover_foco)
+                       args.mover_foco, args.branch)
     elif args.mode == "rewind":
         cmd_rewind(proj, args.to_step, args.reason)
     elif args.mode == "merge-increment":

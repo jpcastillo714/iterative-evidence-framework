@@ -1,12 +1,13 @@
 # Iterative Evidence Framework (IEF)
 
-> Extensión de [spec-kit](https://github.com/github/spec-kit): el mismo espíritu de
-> desarrollo guiado por especificaciones, con ciclos incrementales, varios frentes de
-> trabajo a la vez y reglas que se descubren trabajando.
+> Herramienta autónoma inspirada en [spec-kit](https://github.com/github/spec-kit):
+> el mismo espíritu de desarrollo guiado por especificaciones, con ciclos incrementales,
+> varios frentes de trabajo a la vez y reglas que se descubren trabajando.
 
 > [!NOTE]
-> **No es un fork de spec-kit ni contiene código suyo.** Es un bundle independiente que
-> interopera con él siguiendo su formato de extensiones. Sin afiliación con GitHub, Inc.
+> **No es un fork de spec-kit ni contiene código suyo, y no necesita spec-kit para
+> funcionar.** Se usa por sí solo: clonas este repositorio y llamas a
+> `core/scripts/verify_frame.py` desde tu proyecto. Sin afiliación con GitHub, Inc.
 > Detalle en [`NOTICE.md`](NOTICE.md).
 
 > [!IMPORTANT]

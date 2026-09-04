@@ -48,6 +48,10 @@ EXT_COMMAND_PATTERN = re.compile(r"^speckit\.([a-z0-9-]+)\.[a-z0-9.-]+$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+")
 
 
+def manifiesto_dict():
+    return yaml.safe_load((BUNDLE / "bundle.yml").read_text(encoding="utf-8"))
+
+
 @pytest.fixture(scope="module")
 def manifiesto():
     return yaml.safe_load((BUNDLE / "bundle.yml").read_text(encoding="utf-8"))
@@ -85,17 +89,38 @@ def test_la_version_del_bundle_es_semver(manifiesto):
     assert SEMVER.match(v), "bundle.version %r no es semver" % v
 
 
-def test_cada_preset_viene_fijado_y_dice_como_se_combina(manifiesto):
-    """spec-kit rechaza un preset sin version, sin priority o con strategy invalida."""
-    presets = ((manifiesto.get("provides") or {}).get("presets")) or []
-    assert presets, "el bundle no declara presets"
-    for p in presets:
-        pid = p.get("id", "?")
-        assert SEMVER.match(str(p.get("version") or "")), "preset %s sin version semver" % pid
-        assert isinstance(p.get("priority"), int), "preset %s sin priority entera" % pid
-        assert p.get("strategy") in PRESET_STRATEGIES, (
-            "preset %s: strategy %r no esta en %s" % (pid, p.get("strategy"), sorted(PRESET_STRATEGIES))
+def test_el_bundle_no_declara_presets_de_speckit():
+    """Nuestros «presets» NO son presets de spec-kit. Es un error de categoria.
+
+    Un preset de spec-kit es un paquete que reemplaza plantillas de comando
+    (speckit.specify, speckit.plan...). Un preset del IEF define el ciclo de trabajo:
+    que pasos hay, cuales llevan compuerta, que artefacto produce cada uno. Comparten
+    la palabra y nada mas.
+
+    Medido con la CLI real: `specify preset add --dev presets/generic` responde
+    `Validation Error: Missing required field: schema_version`. Declararlos bajo
+    `provides.presets` era prometer una instalacion que falla siempre.
+    """
+    presets = ((manifiesto_dict().get("provides") or {}).get("presets")) or []
+    assert not presets, (
+        "provides.presets deberia estar vacio: lo que hay en presets/ son ciclos del "
+        "IEF, no presets de spec-kit. Van bajo `provides.cycles`. Declarados: %s"
+        % [p.get("id") for p in presets]
+    )
+
+
+def test_los_ciclos_del_ief_estan_declarados_y_existen_en_disco():
+    ciclos = ((manifiesto_dict().get("provides") or {}).get("cycles")) or []
+    assert ciclos, "el bundle no declara ningun ciclo"
+    for c in ciclos:
+        assert (BUNDLE / "presets" / c["id"] / "preset.yml").is_file(), (
+            "el ciclo %s no existe en disco" % c.get("id")
         )
+    en_disco = {d.name for d in (BUNDLE / "presets").iterdir() if d.is_dir()}
+    assert {c["id"] for c in ciclos} == en_disco, (
+        "bundle.yml declara %s pero en disco hay %s"
+        % (sorted(c["id"] for c in ciclos), sorted(en_disco))
+    )
 
 
 def test_las_extensiones_vienen_fijadas(manifiesto):
@@ -106,17 +131,18 @@ def test_las_extensiones_vienen_fijadas(manifiesto):
 
 
 def test_lo_que_speckit_no_sabe_instalar_esta_marcado_como_nuestro(manifiesto):
-    """`tools` y `catalogs` no son tipos de componente de spec-kit.
+    """`tools`, `catalogs` y `cycles` no son tipos de componente de spec-kit.
 
     No es un error tenerlos —los usa nuestra propia higiene— pero SI lo seria creer
     que spec-kit los instala. Los ignora en silencio: si algun dia el motor o los
     catalogos tuvieran que llegar por ahi, no llegarian. Viajan dentro de la
     extension, y este test existe para que nadie lo olvide.
     """
+    PROPIAS = {"tools", "catalogs", "cycles"}
     ajenas = set((manifiesto.get("provides") or {})) - set(COMPONENT_KINDS)
-    assert ajenas <= {"tools", "catalogs"}, (
+    assert ajenas <= PROPIAS, (
         "provides.%s no es un tipo de componente de spec-kit y no esta documentado "
-        "como clave propia" % ", provides.".join(sorted(ajenas - {"tools", "catalogs"}))
+        "como clave propia" % ", provides.".join(sorted(ajenas - PROPIAS))
     )
 
 
@@ -199,3 +225,65 @@ def test_los_dos_manifiestos_piden_la_misma_serie_de_speckit(manifiesto, extensi
     a = (manifiesto.get("requires") or {}).get("speckit_version")
     b = (extension.get("requires") or {}).get("speckit_version")
     assert a == b, "el bundle pide %r y la extension %r" % (a, b)
+
+
+# ─── Que el motor y la superficie de comandos no se separen ──────────────────
+
+# Modos internos de verificacion: los ejecuta el CI y los tests, no una persona
+# desde un comando. El resto SI necesita puerta de entrada.
+MODOS_INTERNOS = {"check-gates", "check-preset", "check-bundle", "check-steps"}
+
+
+def _modos_del_motor() -> set:
+    import subprocess
+    import sys
+    r = subprocess.run(
+        [sys.executable, str(BUNDLE / "core" / "scripts" / "verify_frame.py"), "--help"],
+        capture_output=True, text=True,
+    )
+    m = re.search(r"--mode \{([^}]+)\}", r.stdout)
+    assert m, "no se pudo leer la lista de modos de --help"
+    return {x.strip() for x in m.group(1).split(",")}
+
+
+def test_todo_modo_de_usuario_tiene_un_comando_que_lo_invoque():
+    """Cuatro modos vivieron sin comando y nadie lo noto.
+
+    `adopt`, `log`, `explain` y `draft-report` se anadieron al motor y quedaron
+    inalcanzables desde la extension: existian, estaban probados, y ningun agente
+    que usara la superficie de comandos podia llegar a ellos. Una funcion sin
+    puerta de entrada es una funcion que no existe para quien la necesita.
+    """
+    invocados = set()
+    for ruta in (BUNDLE / "extension" / "commands").glob("*.md"):
+        invocados |= set(re.findall(r"--mode\s+([a-z-]+)", ruta.read_text(encoding="utf-8")))
+
+    huerfanos = sorted(_modos_del_motor() - MODOS_INTERNOS - invocados)
+    assert not huerfanos, (
+        "estos modos no los invoca ningun comando de extension/commands/: %s" % huerfanos
+    )
+
+
+def test_no_hay_comandos_que_invoquen_modos_inexistentes():
+    """El fallo simetrico: un comando que llama a un modo que se renombro o borro."""
+    modos = _modos_del_motor()
+    rotos = []
+    for ruta in (BUNDLE / "extension" / "commands").glob("*.md"):
+        for modo in re.findall(r"--mode\s+([a-z-]+)", ruta.read_text(encoding="utf-8")):
+            if modo not in modos:
+                rotos.append("%s -> --mode %s" % (ruta.name, modo))
+    assert not rotos, "comandos que invocan modos que el motor no tiene: %s" % rotos
+
+
+def test_cada_comando_declarado_apunta_a_un_archivo_y_al_reves():
+    """Un .md que nadie declara no se instala: es documentacion muerta."""
+    ext = yaml.safe_load((BUNDLE / "extension" / "extension.yml").read_text(encoding="utf-8"))
+    declarados = {c["file"].split("/")[-1]
+                  for c in ((ext.get("provides") or {}).get("commands") or [])}
+    en_disco = {p.name for p in (BUNDLE / "extension" / "commands").glob("*.md")}
+    assert not (en_disco - declarados), (
+        "archivos de comando que extension.yml no declara: %s" % sorted(en_disco - declarados)
+    )
+    assert not (declarados - en_disco), (
+        "comandos declarados sin archivo: %s" % sorted(declarados - en_disco)
+    )
