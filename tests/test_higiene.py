@@ -190,7 +190,11 @@ def test_no_quedan_referencias_a_archivos_borrados():
 
 
 def test_la_documentacion_no_promete_un_schema_version_que_el_motor_no_escribe():
-    """La misma clase de fallo que `2_inspection`: una cadena repetida en dos sitios.
+    """La misma clase de fallo que las claves de paso divergentes: una cadena literal
+    repetida en dos sitios que se actualiza en uno solo.
+
+    (El nombre exacto de aquella clave no se escribe aqui a proposito: hay un test que
+    persigue esa cadena por todo el repositorio y este docstring la haria saltar.)
 
     `ief.init.md` decia que state.yml sale con `schema_version: "3.1"` mientras el motor
     llevaba tiempo escribiendo "4.0". Un agente que siga el comando al pie de la letra
