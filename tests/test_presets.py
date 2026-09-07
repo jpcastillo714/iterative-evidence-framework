@@ -244,11 +244,15 @@ def test_las_claves_de_paso_son_las_mismas_en_todo_el_repo():
     `4_business_rules`: al renombrarlo a `4_rules` habia cuatro sitios que tocar.
     """
     aqui = Path(__file__).resolve()
+    # Archivos que necesitan escribir la clave vieja porque prueban que se DETECTA.
+    # La exencion es nominal a proposito: una lista de nombres concretos, no un
+    # `tests/` entero, para que un descuido de verdad en otro test siga saltando.
+    EXENTOS = {"test_doctor_estado.py"}
     huerfanas = []
     for ruta in list(BUNDLE.rglob("*.py")) + list(BUNDLE.rglob("*.yml")) + list(BUNDLE.rglob("*.md")):
         if any(p in ruta.parts for p in (".git", "__pycache__", "scratch")):
             continue
-        if ruta.resolve() == aqui:
+        if ruta.resolve() == aqui or ruta.name in EXENTOS:
             continue
         texto = ruta.read_text(encoding="utf-8", errors="ignore")
         if "2_inspection" in texto.replace("2_empirical_inspection", ""):

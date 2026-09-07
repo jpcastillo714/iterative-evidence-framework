@@ -63,6 +63,7 @@ from ief_preset import (  # noqa: E402
     presets_disponibles,
 )
 
+SCHEMA_ACTUAL = "4.0"
 INCREMENT_STATUS = ["ACTIVE", "PAUSED", "BLOCKED", "COMPLETED", "MERGED", "ABANDONED"]
 STEP_STATUS = ["PENDING", "IN_PROGRESS", "COMPLETED", "APPROVED", "NEEDS_REVISION"]
 
@@ -559,7 +560,7 @@ def cmd_init(
 
     ident = re.sub(r"[^A-Z0-9-]", "", nombre.upper().replace(" ", "-"))[:24]
     state = {
-        "schema_version": "4.0",
+        "schema_version": SCHEMA_ACTUAL,
         "initiative": {
             "id": ident or "PROYECTO",
             "name": nombre,
@@ -751,7 +752,7 @@ def cmd_adopt(project_dir: Path, preset_id: str, aplicar: bool) -> None:
         )
 
     state = {
-        "schema_version": "4.0",
+        "schema_version": SCHEMA_ACTUAL,
         "initiative": {
             "id": re.sub(r"[^A-Z0-9-]", "", project_dir.name.upper())[:24] or "PROYECTO",
             "name": project_dir.name,
@@ -1454,8 +1455,20 @@ def cmd_rewind(project_dir: Path, to_ref: str, reason: Optional[str]) -> None:
         print("         este paso vuelve a requerir aprobacion humana")
 
 
+def _las_reglas_pasaron_por_una_compuerta(preset: Preset, tipo: str) -> bool:
+    """True si el ciclo tiene un paso con compuerta que produce `rules.yml`.
+
+    En `build` lo tiene: el paso 4. En `exploration`, `task` y `prototype` no hay
+    ninguno, asi que nadie firmo esas reglas y la firma habra que pedirla al promover.
+    """
+    if tipo not in preset.ciclos:
+        return False
+    return any(p.human_gate and p.artefacto == "rules.yml" for p in preset.pasos(tipo))
+
+
 def cmd_merge_increment(
-    project_dir: Path, slug: Optional[str], dry_run: bool
+    project_dir: Path, slug: Optional[str], dry_run: bool,
+    aprobado_por: Optional[str] = None,
 ) -> None:
     """Promueve las reglas del incremento a la especificacion viva del proyecto.
 
@@ -1498,6 +1511,23 @@ def cmd_merge_increment(
     if origen.exists():
         with open(origen, "r", encoding="utf-8") as f:
             propuestas = (yaml.safe_load(f) or {}).get("rules") or []
+
+        # Una regla promovida rige TODO el proyecto y sobrevive al incremento que la
+        # descubrio. Si el ciclo no la aprobo en un paso con compuerta, la firma se
+        # pide aqui: es el acto que tiene consecuencias, no el de escribirla.
+        if propuestas and not _las_reglas_pasaron_por_una_compuerta(preset, tipo):
+            if not aprobado_por:
+                fallar(
+                    "el ciclo `%s` no tiene ninguna compuerta sobre las reglas, asi que\n"
+                    "       nadie ha aprobado estas %d. Promoverlas las hace validas para\n"
+                    "       todo el proyecto.\n\n"
+                    "       Ensenaselas a quien decide y vuelve con su firma:\n"
+                    "         --mode merge-increment --increment %s --by \"<nombre>\"\n\n"
+                    "       Pedirte que promuevas no es aprobar: la firma es de una persona."
+                    % (tipo, len(propuestas), slug_real)
+                )
+            print("  [FIRMA] %d regla(s) de un ciclo sin compuertas, aprobadas por %s"
+                  % (len(propuestas), aprobado_por))
         vigentes = reglas_vigentes(project_dir, preset)
 
         # ── Deteccion de conflictos ─────────────────────────────────────────
@@ -1595,7 +1625,11 @@ def cmd_merge_increment(
     if get_focus(state) == slug_real:
         set_focus(state, sugerir_foco(state))
     state["increments"][idx] = inc
-    record_history(state, "MERGE_INCREMENT", {"increment": slug_real, "changes": resumen})
+    record_history(state, "MERGE_INCREMENT", {
+        "increment": slug_real, "changes": resumen,
+        # Quien firmo, cuando el ciclo no tenia compuerta que lo hiciera.
+        "approved_by": aprobado_por,
+    })
     save_state(state, state_file)
     print("\n[OK] %s marcado MERGED. La especificacion viva esta actualizada." % slug_real)
 
@@ -1868,6 +1902,59 @@ def cmd_doctor(project_dir: Path) -> None:
     avisos: List[str] = []
     incs = state.get("increments", [])
 
+    # 0. El propio estado. Va antes que nada: si el vocabulario de `state.yml` no es
+    #    el que el motor entiende, el resto del diagnostico se hace sobre arena.
+    esquema = str(state.get("schema_version") or "?")
+    if esquema != SCHEMA_ACTUAL:
+        avisos.append(
+            "state.yml declara schema_version %s y este motor escribe %s; "
+            "el archivo viene de una version anterior del IEF" % (esquema, SCHEMA_ACTUAL))
+
+    foco = get_focus(state)
+    if foco and not any(i.get("slug") == foco or i.get("id") == foco for i in incs):
+        problemas.append("el foco apunta a `%s`, que no existe" % foco)
+
+    for inc in incs:
+        slug = inc.get("slug", inc.get("id", "?"))
+
+        est = inc.get("status")
+        if est not in INCREMENT_STATUS:
+            problemas.append(
+                "%s tiene status `%s`, que no existe. Validos: %s"
+                % (slug, est, ", ".join(INCREMENT_STATUS)))
+
+        tipo = inc.get("type", "build")
+        if tipo not in preset.ciclos:
+            problemas.append(
+                "%s es de tipo `%s` y el preset `%s` no lo define. Ciclos: %s"
+                % (slug, tipo, preset.id, ", ".join(sorted(preset.ciclos))))
+            continue                        # sin ciclo no se pueden revisar sus pasos
+
+        pasos_estado = inc.get("steps") or {}
+        for clave, valor in pasos_estado.items():
+            if valor not in STEP_STATUS:
+                problemas.append(
+                    "%s paso `%s` esta en `%s`, que no existe. Validos: %s"
+                    % (slug, clave, valor, ", ".join(STEP_STATUS)))
+
+        # Claves que el ciclo no reconoce. El motor no las lee: busca la suya, no la
+        # encuentra y da el paso por PENDING. Una clave renombrada en una version
+        # anterior se ve como trabajo sin empezar aunque diga COMPLETED, y nadie se
+        # entera. Ya ha pasado dos veces en este proyecto.
+        del_ciclo = {p.clave for p in preset.pasos(tipo)}
+        huerfanas = sorted(set(pasos_estado) - del_ciclo)
+        if huerfanas:
+            problemas.append(
+                "%s tiene claves de paso que el ciclo `%s` no reconoce: %s. "
+                "El motor las ignora y da esos pasos por PENDING, aunque digan otra cosa"
+                % (slug, tipo, ", ".join("`%s`" % k for k in huerfanas)))
+
+        faltan = sorted(del_ciclo - set(pasos_estado))
+        if faltan and inc.get("status") not in CERRADOS:
+            avisos.append(
+                "%s no declara los pasos %s de su ciclo `%s` (se asumen PENDING)"
+                % (slug, ", ".join("`%s`" % k for k in faltan), tipo))
+
     # 1. Dependencias circulares.
     for inc in incs:
         bloqueo = inc.get("blocked") or {}
@@ -2133,7 +2220,7 @@ def main() -> None:
     elif args.mode == "rewind":
         cmd_rewind(proj, args.to_step, args.reason)
     elif args.mode == "merge-increment":
-        cmd_merge_increment(proj, args.increment, args.dry_run)
+        cmd_merge_increment(proj, args.increment, args.dry_run, args.by)
 
 
 if __name__ == "__main__":

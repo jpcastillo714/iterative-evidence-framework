@@ -192,7 +192,11 @@ def test_la_documentacion_no_promete_un_schema_version_que_el_motor_no_escribe()
     habia ido bien.
     """
     motor = (BUNDLE / "core" / "scripts" / "verify_frame.py").read_text(encoding="utf-8")
+    # El motor pasó de repetir "4.0" a declarar SCHEMA_ACTUAL. Se leen las dos formas:
+    # la constante es la fuente de verdad, y los literales siguen valiendo para
+    # documentos con su propio esquema (living_rules).
     escritos = set(re.findall(r'"schema_version":\s*"([\d.]+)"', motor))
+    escritos |= set(re.findall(r'^SCHEMA_ACTUAL\s*=\s*"([\d.]+)"', motor, re.M))
     assert escritos, "el motor ya no escribe schema_version en ningun sitio"
 
     prometidos = set()
