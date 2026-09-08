@@ -126,6 +126,14 @@ cycles:
         name: "Contrato de Datos"
         artifact: "data-contract.yml"
         human_gate: false
+        # El contrato de una exploracion formaliza LO QUE SE ENCONTRO, y eso es del
+        # dominio: capas semanticas, canales, huecos conocidos, presupuesto de datos.
+        # Exigirle `schemas[].fields[]` es imponerle forma de tabla a un hallazgo.
+        #
+        # El paso 3 del ciclo `build` conserva la validacion estricta a proposito: alli
+        # el contrato gobierna un pipeline que alguien va a mantener, y la forma
+        # generica es lo que permite comprobarlo.
+        structure: free
         template: "core/steps/03_data_contracts/template.yml"
         instructions: "core/steps/exploration/02b_data_contract/step-instructions.md"
 
