@@ -358,6 +358,12 @@ def validate_data_contract_shape(data: Dict[str, Any]) -> Tuple[bool, str]:
 
     sources = data.get("sources")
     if not sources:
+        # Distinguir «no hay nada» de «hay algo que no reconozco»: decir `vacio` de un
+        # archivo de 13 KB manda a buscar el problema donde no esta.
+        if data:
+            return False, ("no reconocida: ni `schemas[].fields[]` ni "
+                           "`sources[].columns[]`. Si la forma es del dominio, "
+                           "declara `structure: free` en el paso del preset")
         return False, "vacio"
     for s in sources:
         if not isinstance(s, dict) or not s.get("name") or not s.get("columns") or not s.get("format"):
@@ -492,6 +498,14 @@ def verificar_artefacto(
         res.append(("Artefacto", f"{paso.artefacto} es YAML valido", False))
         return res
     res.append(("Artefacto", f"{paso.artefacto} es YAML valido", True))
+
+    # Un paso puede declarar que la forma de su artefacto es del dominio. Entonces
+    # el nucleo ya ha hecho lo suyo —existe y es YAML legible— y no opina mas.
+    if getattr(paso, "estructura", "core") == "free":
+        res.append(("Estructura",
+                    "%s: forma libre, la define el dominio (structure: free)"
+                    % paso.artefacto, True))
+        return res
 
     if paso.artefacto == "data-contract.yml":
         ok, forma = validate_data_contract_shape(data)
@@ -1197,7 +1211,10 @@ def cmd_advance(project_dir: Path) -> None:
         print(f"          artefacto: {ruta}")
 
 
-def cmd_complete_step(project_dir: Path, slug: Optional[str], ref: Optional[str]) -> None:
+def cmd_complete_step(
+    project_dir: Path, slug: Optional[str], ref: Optional[str],
+    forzar: bool = False, motivo: Optional[str] = None,
+) -> None:
     """Marca el paso actual como COMPLETED, verificando antes su artefacto.
 
     Existia un hueco entre dos reglas del framework: `state.yml` no se edita a mano,
@@ -1225,18 +1242,44 @@ def cmd_complete_step(project_dir: Path, slug: Optional[str], ref: Optional[str]
         n for _, n, ok in verificar_artefacto(preset, inc.get("slug", ""), paso, project_dir)
         if not ok
     ]
-    if problemas:
-        fallar("el paso %s no se puede dar por terminado:\n       - %s"
-               % (paso.ref, "\n       - ".join(problemas)))
+    if problemas and not forzar:
+        fallar(
+            "el paso %s no se puede dar por terminado:\n       - %s\n\n"
+            "       Si el artefacto es correcto y quien no lo entiende es el motor,\n"
+            "       aceptalo de forma explicita y quedara registrado:\n"
+            "         --mode complete-step --step %s --force \\\n"
+            "             --reason \"por que este artefacto vale igual\"\n\n"
+            "       No uses --force para saltarte trabajo que falta de verdad."
+            % (paso.ref, "\n       - ".join(problemas), paso.ref))
+
+    if problemas and forzar:
+        # El motivo no es burocracia: dentro de seis meses es la unica forma de
+        # distinguir «el motor no entendia este formato» de «lo dimos por bueno sin
+        # mirarlo». Sin el, `--force` seria una forma silenciosa de mentir.
+        if not motivo:
+            fallar("--force exige --reason: hay que poder saber despues por que se "
+                   "acepto un artefacto que no valida")
+        print("  [FORZADO] el paso %s se acepta pese a %d comprobacion(es) fallida(s):"
+              % (paso.ref, len(problemas)))
+        for p in problemas:
+            print("            - %s" % p)
+        print("            motivo: %s" % motivo)
 
     pasos = inc.setdefault("steps", {})
     if pasos.get(paso.clave) == "APPROVED":
         fallar("el paso %s ya esta APPROVED; no tiene sentido volver a COMPLETED" % paso.ref)
 
     pasos[paso.clave] = "COMPLETED"
+    if problemas and forzar:
+        # Queda en el incremento, no solo en el historial: `doctor` lo lee de aqui y lo
+        # recuerda mientras el incremento siga abierto.
+        inc.setdefault("forced_steps", {})[paso.clave] = {
+            "reason": motivo, "at": ahora(), "failed": problemas,
+        }
     state["increments"][idx] = inc
     record_history(state, "COMPLETE_STEP", {
         "increment": inc.get("slug"), "step": paso.ref,
+        "forced": bool(problemas and forzar), "reason": motivo,
     })
     save_state(state, state_file)
     print("[COMPLETED] paso %s: %s" % (paso.ref, paso.nombre))
@@ -1409,7 +1452,9 @@ def cmd_set_status(
                       % otro.get("slug"))
 
 
-def cmd_rewind(project_dir: Path, to_ref: str, reason: Optional[str]) -> None:
+def cmd_rewind(
+    project_dir: Path, to_ref: str, reason: Optional[str], slug: Optional[str] = None,
+) -> None:
     if not reason:
         fallar("--reason es obligatorio: el retroceso queda en el historial")
 
@@ -1418,9 +1463,9 @@ def cmd_rewind(project_dir: Path, to_ref: str, reason: Optional[str]) -> None:
         fallar("no existe initiative/state.yml")
     preset = preset_de(state)
 
-    inc, idx = get_increment(state, None)
+    inc, idx = get_increment(state, slug)
     if not inc:
-        fallar("no hay incremento activo")
+        fallar("incremento no encontrado: %s" % (slug or "no hay incremento activo"))
 
     tipo = inc.get("type", "build")
     ciclo = preset.ciclo(tipo)
@@ -1436,6 +1481,21 @@ def cmd_rewind(project_dir: Path, to_ref: str, reason: Optional[str]) -> None:
 
     pasos = inc.setdefault("steps", {})
     tocados = []
+    # Se dice antes de hacerlo. El retroceso arrastra todo lo que venia despues,
+    # porque ese trabajo se apoyaba en lo que ahora se revisa; darlo por bueno seria
+    # peor. Pero descubrirlo despues es una sorpresa cara, y hubo que leer el codigo
+    # fuente para saberlo.
+    arrastrados = [p for p in ciclo.pasos[i_destino : i_actual + 1]
+                   if pasos.get(p.clave) not in (None, "PENDING")]
+    if len(arrastrados) > 1:
+        print("  Este retroceso marca NEEDS_REVISION en %d pasos, no solo en el %s:"
+              % (len(arrastrados), to_ref))
+        for p in arrastrados:
+            print("    %-4s %-28s %s -> NEEDS_REVISION"
+                  % (p.ref, p.nombre, pasos.get(p.clave)))
+        print("  Su trabajo se apoyaba en lo que vas a revisar.")
+        print()
+
     for p in ciclo.pasos[i_destino : i_actual + 1]:
         pasos[p.clave] = "NEEDS_REVISION"
         inc.get("approvals", {}).pop(p.clave, None)
@@ -1955,6 +2015,17 @@ def cmd_doctor(project_dir: Path) -> None:
                 "%s no declara los pasos %s de su ciclo `%s` (se asumen PENDING)"
                 % (slug, ", ".join("`%s`" % k for k in faltan), tipo))
 
+    # 0b. Pasos aceptados a la fuerza. Se recuerdan mientras el incremento siga
+    #     abierto: un paso forzado no puede volver a parecer un paso normal.
+    for inc in incs:
+        if inc.get("status") in CERRADOS:
+            continue
+        for clave, dato in (inc.get("forced_steps") or {}).items():
+            avisos.append(
+                "%s paso `%s` se acepto con --force el %s: %s"
+                % (inc.get("slug", "?"), clave, str(dato.get("at", ""))[:10],
+                   dato.get("reason") or "sin motivo declarado"))
+
     # 1. Dependencias circulares.
     for inc in incs:
         bloqueo = inc.get("blocked") or {}
@@ -2161,6 +2232,8 @@ def main() -> None:
     p.add_argument("--by", help="quien aprueba (modo approve-step)")
     p.add_argument("--json", action="store_true", help="salida JSON (modo status)")
     p.add_argument("--dry-run", action="store_true", help="no escribe (modo merge-increment)")
+    p.add_argument("--force", dest="force_step", action="store_true",
+                   help="acepta un paso cuyo artefacto no valida (exige --reason)")
     p.add_argument("--force-overwrite", action="store_true")
     p.add_argument("--rule", help="id de la regla a explicar (modo explain)")
     p.add_argument("--message", help="que se hizo (modo log)")
@@ -2208,7 +2281,7 @@ def main() -> None:
     elif args.mode == "advance":
         cmd_advance(proj)
     elif args.mode == "complete-step":
-        cmd_complete_step(proj, args.increment, args.step)
+        cmd_complete_step(proj, args.increment, args.step, args.force_step, args.reason)
     elif args.mode == "approve-step":
         cmd_approve_step(proj, args.by)
     elif args.mode == "set-status":
@@ -2218,7 +2291,7 @@ def main() -> None:
                        args.blocked_kind, args.blocked_on, args.expected,
                        args.mover_foco, args.branch)
     elif args.mode == "rewind":
-        cmd_rewind(proj, args.to_step, args.reason)
+        cmd_rewind(proj, args.to_step, args.reason, args.increment)
     elif args.mode == "merge-increment":
         cmd_merge_increment(proj, args.increment, args.dry_run, args.by)
 

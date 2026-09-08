@@ -68,6 +68,12 @@ class Paso:
     human_gate: bool
     plantilla: Optional[str] = None
     instrucciones: Optional[str] = None
+    # `free` = la forma del artefacto la decide el dominio, no el nucleo. El motor
+    # comprueba que existe y que es legible, y no juzga su organizacion interna.
+    # El punto de extension que `validate_data_contract_shape` documentaba y que
+    # hasta ahora no existia: sin el, un contrato valido pero con otra forma dejaba
+    # el incremento atascado sin ningun comando que lo sacara.
+    estructura: str = "core"
 
     @property
     def requiere_aprobacion(self) -> bool:
@@ -292,6 +298,7 @@ def _paso_desde_dict(d: Dict[str, Any], contexto: str) -> Paso:
         human_gate=bool(d.get("human_gate", False)),
         plantilla=d.get("template") or d.get("plantilla"),
         instrucciones=d.get("instructions") or d.get("instrucciones"),
+        estructura=str(d.get("structure") or d.get("estructura") or "core").lower(),
     )
 
 

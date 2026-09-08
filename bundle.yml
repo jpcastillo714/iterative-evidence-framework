@@ -2,7 +2,7 @@ schema_version: "1.0"
 bundle:
   id: "iterative-evidence-framework"
   name: "Iterative Evidence Framework"
-  version: "0.11.0"
+  version: "0.12.0"
   role: "framework"
   description: >-
     Extensión de spec-kit con ciclos incrementales definidos por el preset, compuertas
@@ -21,7 +21,7 @@ requires:
 provides:
   extensions:
     - id: "ief"
-      version: "0.11.0"
+      version: "0.12.0"
       source: "./extension"
 
   # ───────────────────────────────────────────────────────────────────────────
@@ -62,23 +62,23 @@ provides:
   # ───────────────────────────────────────────────────────────────────────────
   cycles:
     - id: "generic"
-      version: "0.11.0"
+      version: "0.12.0"
       description: "Ciclo base: task (2 pasos), exploration (4), prototype (4) y build (7)."
       source: "./presets/generic"
     - id: "research"
-      version: "0.11.0"
+      version: "0.12.0"
       description: "Tesis, memorias y papers. El entregable es un documento defendible."
       source: "./presets/research"
     - id: "product"
-      version: "0.11.0"
+      version: "0.12.0"
       description: "Sistemas que se despliegan y alguien mantiene."
       source: "./presets/product"
     - id: "analysis"
-      version: "0.11.0"
+      version: "0.12.0"
       description: "Responder preguntas con datos. El entregable es un hallazgo."
       source: "./presets/analysis"
     - id: "modeling"
-      version: "0.11.0"
+      version: "0.12.0"
       description: "Mixin componible: anade la Evaluacion del Modelo con compuerta y model card."
       source: "./presets/modeling"
 

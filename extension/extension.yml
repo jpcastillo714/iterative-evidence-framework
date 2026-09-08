@@ -2,7 +2,7 @@ schema_version: "1.0"
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: "0.11.0"
+  version: "0.12.0"
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
