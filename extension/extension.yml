@@ -2,7 +2,7 @@ schema_version: "1.0"
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: "0.13.0"
+  version: "0.14.0"
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
@@ -104,6 +104,11 @@ provides:
     - ief.log
     description: Anota trabajo que no merece un incremento (un grafico, un documento)
     file: commands/ief.log.md
+  - name: speckit.ief.input
+    aliases:
+    - ief.input
+    description: "Registra algo que el proyecto aprendio de fuera: una reunion, un correo"
+    file: commands/ief.input.md
   - name: speckit.ief.task
     aliases:
     - ief.task

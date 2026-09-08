@@ -223,6 +223,25 @@ def hash_reglas(project_dir: Path, preset: Preset) -> Optional[str]:
     return "sha256:" + hashlib.sha256(ruta.read_bytes()).hexdigest()[:16]
 
 
+KINDS_DE_ENTRADA = ["meeting", "document", "dataset", "decision", "correspondence"]
+
+
+def ruta_entradas(project_dir: Path, preset: Preset) -> Path:
+    return project_dir / preset.rutas.get("specs_dir", "initiative/specs") / "inputs.yml"
+
+
+def entradas_externas(project_dir: Path, preset: Preset) -> Dict[str, Dict[str, Any]]:
+    """Lo que el proyecto sabe porque se lo dijeron, no porque lo dedujera."""
+    ruta = ruta_entradas(project_dir, preset)
+    if not ruta.exists():
+        return {}
+    try:
+        doc = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return {}
+    return {e["id"]: e for e in (doc.get("inputs") or []) if e.get("id")}
+
+
 def reglas_vigentes(project_dir: Path, preset: Preset) -> Dict[str, Dict[str, Any]]:
     ruta = ruta_reglas(project_dir, preset)
     if not ruta.exists():
@@ -408,29 +427,49 @@ def _validar_rules(
     # La evidencia citada tiene que existir. Una regla que cita `TST-ACC-042` sin que
     # ese test exista en ningun sitio es peor que una regla sin evidencia: parece
     # respaldada, y nadie vuelve a comprobarlo.
+    #
+    # Y la evidencia no siempre es un test. Un hecho que llego de fuera —lo que dijo
+    # quien provee los datos, lo que retiro un permiso— no se demuestra con un assert:
+    # se demuestra con quien lo dijo y cuando, que es lo que registra una entrada
+    # externa. Por eso `EXT-*` cuenta como evidencia igual que `TST-*`.
     if dir_inc is not None:
-        tests_conocidos = set()
-        for f in (dir_inc, dir_inc.parent.parent / "specs"):
-            ruta = f / "acceptance-tests.yml"
-            if ruta.exists():
-                try:
-                    doc = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
-                except yaml.YAMLError:
-                    continue
-                for t in (doc.get("tests") or []):
-                    tid = t.get("test_id") or t.get("id")
-                    if tid:
-                        tests_conocidos.add(str(tid))
-        if tests_conocidos:
-            fantasmas = sorted({
-                str(e) for r in reglas for e in (r.get("evidence") or [])
-                if str(e).startswith("TST-") and str(e) not in tests_conocidos
-            })
-            res.append((
-                "Trazabilidad",
-                "la evidencia citada existe" + (" (fantasmas: %s)" % fantasmas if fantasmas else ""),
-                not fantasmas,
-            ))
+        dir_specs = dir_inc.parent.parent / "specs"
+
+        conocidos = set()
+        for ruta in (dir_inc / "acceptance-tests.yml", dir_specs / "acceptance-tests.yml"):
+            if not ruta.exists():
+                continue
+            try:
+                doc = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError:
+                continue
+            for t in (doc.get("tests") or []):
+                tid = t.get("test_id") or t.get("id")
+                if tid:
+                    conocidos.add(str(tid))
+
+        ruta_ent = dir_specs / "inputs.yml"
+        if ruta_ent.exists():
+            try:
+                doc = yaml.safe_load(ruta_ent.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError:
+                doc = {}
+            for e in (doc.get("inputs") or []):
+                if e.get("id"):
+                    conocidos.add(str(e["id"]))
+
+        # Se comprueba siempre, no solo cuando ya existe algo conocido: un proyecto sin
+        # un solo test es precisamente donde una cita inventada pasa desapercibida.
+        fantasmas = sorted({
+            str(e) for r in reglas for e in (r.get("evidence") or [])
+            if str(e).startswith(("TST-", "EXT-")) and str(e) not in conocidos
+        })
+        res.append((
+            "Trazabilidad",
+            "la evidencia citada existe"
+            + (" (fantasmas: %s)" % fantasmas if fantasmas else ""),
+            not fantasmas,
+        ))
     if ambitos_malos:
         res.append(("Estructura", "scope invalido en %s" % ambitos_malos, False))
     if estados_malos:
@@ -790,6 +829,84 @@ def cmd_adopt(project_dir: Path, preset_id: str, aplicar: bool) -> None:
         print("    nueva: %s" % c)
     print()
     print("  Siguiente: revisa initiative/specs/constitution.md y abre un incremento.")
+
+
+def cmd_record_input(
+    project_dir: Path, fuente: Optional[str], resumen: Optional[str], kind: Optional[str],
+    fecha: Optional[str], archivos: Optional[str], invalida: Optional[str],
+) -> None:
+    """Anota algo que el proyecto aprendio de fuera.
+
+    No es una regla: nadie lo dedujo trabajando. No es una tarea: no hay nada que hacer
+    todavia. Es un hecho, con fecha y procedencia, que a partir de ahora se puede citar
+    como evidencia igual que un test.
+    """
+    if not fuente:
+        fallar("--source es obligatorio: sin saber de donde viene, un hecho no es "
+               "evidencia de nada")
+    if not resumen:
+        fallar("--summary es obligatorio: la anotacion ES el contenido")
+
+    state, state_file = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+
+    if kind and kind not in KINDS_DE_ENTRADA:
+        fallar("--kind invalido. Validos: %s" % ", ".join(KINDS_DE_ENTRADA))
+
+    existentes = entradas_externas(project_dir, preset)
+    vigentes = reglas_vigentes(project_dir, preset)
+
+    invalidadas = [x.strip() for x in (invalida or "").split(",") if x.strip()]
+    for rid in invalidadas:
+        if rid not in vigentes:
+            fallar("--invalidates cita `%s`, que no es una regla del proyecto. "
+                   "Conocidas: %s" % (rid, ", ".join(sorted(vigentes)) or "ninguna"))
+
+    nuevo_id = "EXT-%03d" % (len(existentes) + 1)
+    entrada: Dict[str, Any] = {
+        "id": nuevo_id,
+        "date": fecha or ahora()[:10],
+        "source": fuente,
+        "kind": kind or "meeting",
+        "summary": resumen,
+    }
+    if archivos:
+        entrada["artifacts"] = [x.strip() for x in archivos.split(",") if x.strip()]
+    if invalidadas:
+        entrada["invalidates"] = invalidadas
+
+    ruta = ruta_entradas(project_dir, preset)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    doc = {}
+    if ruta.exists():
+        try:
+            doc = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            doc = {}
+    doc.setdefault("schema_version", "1.0")
+    doc.setdefault("kind", "external_inputs")
+    doc["updated_at"] = ahora()
+    doc.setdefault("inputs", []).append(entrada)
+    ruta.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
+                    encoding="utf-8")
+
+    record_history(state, "RECORD_INPUT", {
+        "input": nuevo_id, "source": fuente, "invalidates": invalidadas,
+    })
+    save_state(state, state_file)
+
+    print("[ENTRADA] %s  %s" % (nuevo_id, resumen))
+    print("          %s" % ruta.relative_to(project_dir))
+    print("          Ya se puede citar como evidencia: `evidence: [%s]`" % nuevo_id)
+    if invalidadas:
+        print()
+        print("  Declara que invalida %s, pero NO las ha tocado." % ", ".join(invalidadas))
+        print("  Anotar un hecho es gratis; cambiar lo que gobierna el proyecto lleva")
+        print("  firma. `doctor` te lo recordara hasta que alguien decida:")
+        print("    - reemplazarlas con una regla que declare `supersedes`, o")
+        print("    - descartar la entrada si al mirarla no era para tanto.")
 
 
 def cmd_log(
@@ -1946,6 +2063,53 @@ def cmd_explain(project_dir: Path, rule_id: str) -> None:
     print()
 
 
+def cmd_explain_input(project_dir: Path, input_id: str) -> None:
+    """Que dijo, quien lo dijo, cuando, y que se hizo al respecto."""
+    state, _ = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+
+    entradas = entradas_externas(project_dir, preset)
+    e = entradas.get(input_id)
+    if not e:
+        fallar("no existe la entrada `%s`. Conocidas: %s"
+               % (input_id, ", ".join(sorted(entradas)) or "ninguna"))
+
+    vigentes = reglas_vigentes(project_dir, preset)
+
+    print()
+    print("  %s" % input_id)
+    print("  " + "=" * 70)
+    print("  %s" % e.get("summary", "(sin resumen)"))
+    print()
+    print("  fecha     : %s" % e.get("date", "?"))
+    print("  procede de: %s" % e.get("source", "?"))
+    print("  tipo      : %s" % e.get("kind", "?"))
+    for a in (e.get("artifacts") or []):
+        print("  documento : %s" % a)
+
+    invalida = e.get("invalidates") or []
+    print()
+    print("  QUE PONE EN DUDA")
+    if not invalida:
+        print("    nada declarado")
+    for rid in invalida:
+        r = vigentes.get(rid)
+        if not r:
+            print("    %-14s citada pero ya no esta en el proyecto" % rid)
+        elif r.get("status") == "active":
+            print("    %-14s SIGUE ACTIVA  <- pendiente de resolver" % rid)
+        else:
+            print("    %-14s ya %s" % (rid, r.get("status")))
+
+    apoyadas = [r["id"] for r in vigentes.values() if input_id in (r.get("evidence") or [])]
+    print()
+    print("  QUE SE APOYA EN ELLA")
+    print("    " + (", ".join(apoyadas) if apoyadas else "ninguna regla la cita todavia"))
+    print()
+
+
 def cmd_doctor(project_dir: Path) -> None:
     """Diagnostico: en que estado real esta esto.
 
@@ -2025,6 +2189,23 @@ def cmd_doctor(project_dir: Path) -> None:
                 "%s paso `%s` se acepto con --force el %s: %s"
                 % (inc.get("slug", "?"), clave, str(dato.get("at", ""))[:10],
                    dato.get("reason") or "sin motivo declarado"))
+
+    # 0c. Entradas externas que invalidan reglas que siguen vigentes.
+    #     Este es el motivo de que las entradas existan. Que una reunion tumbe tres
+    #     afirmaciones del proyecto y las tres sigan rigiendo seis meses despues es el
+    #     fallo caro; el acta guardada en una carpeta no lo evita, porque nadie la
+    #     vuelve a abrir.
+    entradas = entradas_externas(project_dir, preset)
+    vigentes_ahora = reglas_vigentes(project_dir, preset)
+    for eid in sorted(entradas):
+        for rid in (entradas[eid].get("invalidates") or []):
+            regla = vigentes_ahora.get(rid)
+            if regla and regla.get("status") == "active":
+                problemas.append(
+                    "%s (%s) dice que invalida %s, y %s sigue activa. "
+                    "Reemplazala con una regla que declare `supersedes: %s`, o retira "
+                    "esa linea de la entrada si al mirarla no era para tanto"
+                    % (eid, entradas[eid].get("date", "?"), rid, rid, rid))
 
     # 1. Dependencias circulares.
     for inc in incs:
@@ -2200,7 +2381,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description="IEF - motor de estado y verificacion")
     p.add_argument("--mode", required=True, choices=[
         "init", "adopt", "new-increment", "log", "status", "focus", "doctor",
-        "explain", "draft-report",
+        "explain", "draft-report", "record-input",
         "verify-step", "check-gates", "check-preset", "check-bundle", "check-steps",
         "advance", "complete-step", "approve-step", "set-status", "rewind",
         "merge-increment",
@@ -2236,6 +2417,16 @@ def main() -> None:
                    help="acepta un paso cuyo artefacto no valida (exige --reason)")
     p.add_argument("--force-overwrite", action="store_true")
     p.add_argument("--rule", help="id de la regla a explicar (modo explain)")
+    p.add_argument("--input", dest="input_id",
+                   help="id de la entrada externa a explicar (modo explain)")
+    p.add_argument("--source", help="de donde viene (modo record-input)")
+    p.add_argument("--summary", help="que dice (modo record-input)")
+    p.add_argument("--kind", help="meeting | document | dataset | decision | correspondence")
+    p.add_argument("--date", help="cuando ocurrio (modo record-input; por defecto hoy)")
+    p.add_argument("--file", dest="archivos",
+                   help="acta o documento, separados por comas (modo record-input)")
+    p.add_argument("--invalidates",
+                   help="reglas que esto pone en duda, separadas por comas")
     p.add_argument("--message", help="que se hizo (modo log)")
     p.add_argument("--output", help="donde quedo el resultado (modo log)")
     p.add_argument("--from", dest="origen", help="de donde salio (modo log)")
@@ -2252,10 +2443,16 @@ def main() -> None:
         cmd_adopt(proj, args.preset or "generic", args.yes)
     elif args.mode == "draft-report":
         cmd_draft_report(proj, args.increment, args.force_overwrite)
+    elif args.mode == "record-input":
+        cmd_record_input(proj, args.source, args.summary, args.kind,
+                         args.date, args.archivos, args.invalidates)
     elif args.mode == "explain":
-        if not args.rule:
-            fallar("--rule es obligatorio: --mode explain --rule RUL-001-001")
-        cmd_explain(proj, args.rule)
+        if args.input_id:
+            cmd_explain_input(proj, args.input_id)
+        elif args.rule:
+            cmd_explain(proj, args.rule)
+        else:
+            fallar("--rule o --input: --mode explain --rule RUL-001-001")
     elif args.mode == "log":
         cmd_log(proj, args.message, args.output, args.origen)
     elif args.mode == "new-increment":
