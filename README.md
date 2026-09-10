@@ -10,6 +10,11 @@
 > `core/scripts/verify_frame.py` desde tu proyecto. Sin afiliación con GitHub, Inc.
 > Detalle en [`NOTICE.md`](NOTICE.md).
 
+> [!TIP]
+> **¿Quieres entenderlo a fondo?** [`docs/GUIA_DE_ESTUDIO.md`](docs/GUIA_DE_ESTUDIO.md)
+> explica cada pieza con salidas reales del motor, cuatro casos de uso completos y los
+> malentendidos más frecuentes.
+
 > [!IMPORTANT]
 > **Este directorio es el framework, no un proyecto.** Nunca se crea un `initiative/`
 > aquí dentro ni se trabaja sobre esta carpeta: el IEF se aplica a *otros* repositorios.
