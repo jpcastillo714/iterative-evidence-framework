@@ -59,8 +59,10 @@ incremento con `--type task | exploration | prototype | build`.
        --preset <preset> --initiative-name "<nombre>"
    ```
 
-3. Generar `AGENTS.md` en la raiz combinando `core/templates/agents-template.md` con
-   `presets/<preset>/agents-fragment.md`. Si ya existe, hacer append, nunca sobrescribir.
+3. `AGENTS.md` lo escribe `init`: pone la sección del IEF entre los marcadores
+   `<!-- IEF:INICIO vX -->` y `<!-- IEF:FIN -->`. Si ya existía, la inserta al principio
+   sin borrar nada. **No lo armes a mano** ni edites dentro de los marcadores: la sección
+   la mantiene al día `--mode migrate`. Las reglas propias del proyecto van fuera.
 
 4. Ofrecer crear el primer incremento: `/speckit.ief.charter` (build) o
    `/speckit.ief.explore` (exploration).

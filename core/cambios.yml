@@ -1,0 +1,129 @@
+# Que cambia en cada version para los proyectos que ya usan el IEF, y que hacer.
+#
+# Lo lee el motor (--mode upgrade-notes, status --json -> upgrade, doctor) y lo filtra
+# por la version de cada proyecto: un proyecto en 0.14.0 ve solo lo posterior.
+# CHANGELOG.md cuenta lo mismo para personas. Ver docs/decisiones/ADR-002.
+#
+# Campos de cada cambio:
+#   id          CHG-<version>-NN, unico
+#   tipo        añadido | cambiado | obsoleto | retirado | corregido
+#   afecta      state | modo | flag | ruta | plantilla | agents   (lista)
+#   que_cambia  lo que cambio, en una o dos frases
+#   que_hacer   la accion concreta, escrita para que un agente la ejecute
+#   migracion   id de la migracion del motor que lo aplica, o null
+#   anunciado_en  (solo `retirado`) el id del cambio `obsoleto` de una version
+#                 ANTERIOR que lo anuncio. Nada se retira sin aviso previo.
+#
+# `--mode check-bundle` valida este archivo. Cada version de bundle.yml necesita su
+# bloque, aunque este vacio.
+
+schema_version: "1.0"
+
+versiones:
+  - version: "0.15.0"
+    fecha: "2026-09-24"
+    cambios:
+      - id: CHG-0.15.0-01
+        tipo: añadido
+        afecta: [state]
+        que_cambia: >-
+          state.yml registra `ief_version`: la version del IEF con la que el proyecto
+          esta al dia. La escriben `init`, `adopt` y `migrate`. Un proyecto sin el campo
+          se trata como 0.14.0.
+        que_hacer: >-
+          Muestrale al usuario la salida de `--mode migrate` (sin --yes, no escribe nada)
+          y, si esta de acuerdo, que ejecute `--mode migrate --yes`.
+        migracion: "0.14.0->0.15.0"
+
+      - id: CHG-0.15.0-02
+        tipo: cambiado
+        afecta: [agents, plantilla]
+        que_cambia: >-
+          La parte del IEF en AGENTS.md la escribe el motor, entre los marcadores
+          `<!-- IEF:INICIO vX -->` y `<!-- IEF:FIN -->`, y `migrate` la mantiene al dia.
+          Lo escrito fuera de los marcadores nunca se toca. Antes la armaba un agente a
+          mano y quedaba desactualizada.
+        que_hacer: >-
+          `--mode migrate --yes` inserta la seccion al principio de AGENTS.md sin borrar
+          nada. Despues, revisa con el usuario si mas abajo quedaron instrucciones del
+          IEF duplicadas o viejas (por ejemplo, que approve-step cae siempre sobre el
+          foco) y proponle borrarlas. Las reglas propias del proyecto se quedan.
+        migracion: "0.14.0->0.15.0"
+
+      - id: CHG-0.15.0-03
+        tipo: añadido
+        afecta: [modo]
+        que_cambia: >-
+          Modos nuevos: `upgrade-notes` (que cambio y que hacer) y `migrate` (aplica las
+          migraciones; sin --yes solo muestra que haria, con --yes respalda antes de
+          escribir). `status --json` trae `ief_version`, `engine_version` y `upgrade`.
+        que_hacer: >-
+          Al empezar una sesion, mira `upgrade` en `status --json`. Si no es null, antes
+          de cualquier otra cosa muestrale al usuario `--mode upgrade-notes`.
+        migracion: null
+
+      - id: CHG-0.15.0-04
+        tipo: añadido
+        afecta: [state, modo]
+        que_cambia: >-
+          Un motor mas viejo que el proyecto se niega a escribir en el; los modos de
+          lectura funcionan con un aviso.
+        que_hacer: >-
+          Si ves «actualiza el bundle antes de escribir en este proyecto», no edites
+          state.yml a mano para esquivarlo: pidele al usuario que actualice el bundle.
+        migracion: null
+
+      - id: CHG-0.15.0-05
+        tipo: añadido
+        afecta: [state]
+        que_cambia: >-
+          Cada firma de compuerta guarda la huella SHA-256 del artefacto aprobado
+          (`artifact_sha256`) y el canal por el que se dio (`approved_via`: interactive o
+          declared). Las firmas anteriores quedan «sin huella» y siguen valiendo.
+        que_hacer: >-
+          Nada obligatorio. Si el usuario quiere certificar una firma antigua, puede
+          volver a firmarla el mismo con `--mode approve-step --increment <slug> --step
+          <ref>`. No lo hagas tu.
+        migracion: null
+
+      - id: CHG-0.15.0-06
+        tipo: cambiado
+        afecta: [modo]
+        que_cambia: >-
+          Si un artefacto cambia despues de firmado, la firma se vence: `check-gates` sale
+          con codigo 1, `doctor` lo marca como problema y `advance` no deja pasar. Aplica
+          tambien a los criterios de aceptacion: firmarlos los congela.
+        que_hacer: >-
+          Ante «aprobacion vencida», muestrale al usuario que cambio en el artefacto y
+          pidele que lo revise y vuelva a firmar con `--mode approve-step --increment
+          <slug> --step <ref>`. Nunca vuelvas a firmar tu.
+        migracion: null
+
+      - id: CHG-0.15.0-07
+        tipo: añadido
+        afecta: [modo, flag]
+        que_cambia: >-
+          `--mode gate-policy --require-interactive on|off`: el proyecto puede exigir que
+          las compuertas se firmen desde una terminal interactiva. Apagarlo exige estar en
+          una terminal.
+        que_hacer: >-
+          Si approve-step responde que el proyecto exige firmar desde una terminal,
+          presenta el artefacto y pidele al usuario que ejecute él mismo el comando. No intentes
+          simular una terminal.
+        migracion: null
+
+      - id: CHG-0.15.0-08
+        tipo: corregido
+        afecta: [flag]
+        que_cambia: >-
+          `approve-step` y `advance` respetan `--increment` y nombran el incremento en la
+          salida. Hasta 0.14.0 lo aceptaban sin leerlo y actuaban siempre sobre el foco.
+        que_hacer: >-
+          Ya no hace falta mover el foco antes de firmar o avanzar otro frente: pasa
+          `--increment <slug>`.
+        migracion: null
+
+  - version: "0.14.0"
+    fecha: "2026-09-24"
+    # La primera version con registro. Lo anterior esta en `git log`.
+    cambios: []

@@ -72,5 +72,5 @@ o no figura en el índice de abajo.
 
 | ADR | Título | Estado |
 |---|---|---|
-| [ADR-001](ADR-001-firma-humana-ligada-al-contenido.md) | Firma humana ligada al contenido y al canal por el que se dio | Propuesta |
-| [ADR-002](ADR-002-compatibilidad-entre-versiones.md) | Compatibilidad entre versiones: qué cambió, qué hacer y cómo migrar | Propuesta |
+| [ADR-001](ADR-001-firma-humana-ligada-al-contenido.md) | Firma humana ligada al contenido y al canal por el que se dio | Aceptada (2026-09-24) |
+| [ADR-002](ADR-002-compatibilidad-entre-versiones.md) | Compatibilidad entre versiones: qué cambió, qué hacer y cómo migrar | Aceptada (2026-09-24) |

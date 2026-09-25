@@ -183,6 +183,13 @@ Dos frases que conviene memorizar:
 > **Pedirte que hagas algo no es aprobarlo.** Si el usuario le dice a un agente «haz el
 > charter», el agente escribe el charter; no lo aprueba en nombre del usuario.
 
+Desde 0.15.0, **una firma dice «aprobé esto»**: guarda la huella (SHA-256) del artefacto
+aprobado. Si el artefacto cambia después, la firma se **vence**, y `check-gates`, `doctor`
+y `advance` lo detienen hasta que la persona lo revise y vuelva a firmar. La firma también
+registra el canal por el que se dio: `interactive` si alguien la confirmó escribiendo en
+una terminal, `declared` si no, y cada proyecto puede exigir la primera. La decisión y su
+evidencia están en [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md).
+
 ### Garantía 3 — Criterios ejecutables
 
 **Un criterio de aceptación que no se puede ejecutar no cuenta como criterio.**
@@ -754,9 +761,9 @@ se niega. Y como el paso lleva compuerta, lo dice:
 ```
 $ verify_frame.py --mode complete-step
 
-[COMPLETED] paso 1: Hipotesis y Alcance
-            lleva compuerta: pide aprobacion al usuario y registrala con
-            --mode approve-step --by "<usuario>"
+[COMPLETED] 001_ingesta · paso 1: Hipotesis y Alcance
+            lleva compuerta: presenta el artefacto al usuario; la firma es suya:
+            --mode approve-step --increment 001_ingesta --by "<usuario>"
 ```
 
 **3. Intentar avanzar sin firma.** El motor se niega:
@@ -764,8 +771,8 @@ $ verify_frame.py --mode complete-step
 ```
 $ verify_frame.py --mode advance
 
-ERROR: el paso 1 (Hipotesis y Alcance) requiere aprobacion del usuario.
-       Ejecuta: verify_frame.py --mode approve-step
+ERROR: el paso 1 (Hipotesis y Alcance) de 001_ingesta requiere aprobacion del usuario.
+       Ejecuta: verify_frame.py --mode approve-step --increment 001_ingesta
 ```
 
 **4. La persona que decide lo aprueba:**
@@ -773,7 +780,20 @@ ERROR: el paso 1 (Hipotesis y Alcance) requiere aprobacion del usuario.
 ```
 $ verify_frame.py --mode approve-step --by "Ana Perez"
 
-[APPROVED] paso 1: Hipotesis y Alcance
+[APPROVED] 001_ingesta · paso 1: Hipotesis y Alcance
+           huella sha256:9cd46f830066d84d...: si initiative/increments/001_ingesta/charter.md cambia, esta firma se vence
+           firma declarada: no se dio desde una terminal interactiva, y asi
+           queda registrada. Para exigirlo: --mode gate-policy --require-interactive on
+```
+
+Si Ana lo ejecuta en su terminal, el motor le pide confirmar escribiendo el slug del
+incremento, y la firma queda como `interactive`. Si el charter cambia después de
+firmado, la firma se vence:
+
+```
+$ verify_frame.py --mode check-gates
+
+  FAIL  001_ingesta · paso 1 (Hipotesis y Alcance) APPROVED, pero initiative/increments/001_ingesta/charter.md cambio despues de la firma
 ```
 
 **5. Ahora sí se avanza:**
@@ -781,7 +801,7 @@ $ verify_frame.py --mode approve-step --by "Ana Perez"
 ```
 $ verify_frame.py --mode advance
 
-[ADVANCE] paso 2: Exploracion de Datos
+[ADVANCE] 001_ingesta · paso 2: Exploracion de Datos
           plantilla: core/steps/02_empirical_inspection/template.md
           artefacto: initiative/increments/001_pipeline_de_limpieza/inspection-report.md
 ```
@@ -1799,7 +1819,7 @@ $ verify_frame.py --mode complete-step --force \
   [FORZADO] el paso 3 se acepta pese a 1 comprobacion(es) fallida(s):
             - data-contract.yml estructura valida (no reconocida: ...)
             motivo: el contrato va por capas del dominio; el esquema tabular llega en el paso 6
-[COMPLETED] paso 3: Esquema de Datos
+[COMPLETED] 001_ingesta · paso 3: Esquema de Datos
             --mode advance para pasar al siguiente
 ```
 
@@ -2162,6 +2182,67 @@ faltaban.
 
 ---
 
+### Actualizar el IEF en un proyecto que ya lo usa
+
+Un proyecto dura meses y el bundle cambia mientras tanto. Desde 0.15.0, `state.yml`
+recuerda con qué versión del IEF está al día (`ief_version`), y el motor dice qué cambió
+desde entonces. La decisión está en
+[ADR-002](decisiones/ADR-002-compatibilidad-entre-versiones.md).
+
+Cualquier comando avisa en una línea, por stderr, sin ensuciar la salida:
+
+```
+[IEF] Este proyecto esta al dia con IEF 0.14.0 y el motor es 0.15.0: hay 8 cambio(s) que lo afectan. Revisalos con --mode upgrade-notes y aplicalos con --mode migrate.
+```
+
+`upgrade-notes` explica cada cambio y qué hacer. Lo lee una persona, y también el agente,
+que lo recibe en `status --json` como el bloque `upgrade`:
+
+```
+$ verify_frame.py --mode upgrade-notes
+
+  IEF 0.14.0 -> 0.15.0: 8 cambio(s) que afectan a este proyecto
+
+  [0.15.0] añadido · state  (CHG-0.15.0-01)
+    que cambia: state.yml registra `ief_version`: la version del IEF con la que el proyecto esta al dia. ...
+    que hacer : Muestrale al usuario la salida de `--mode migrate` (sin --yes, no escribe nada) y, si esta de acuerdo, que ejecute `--mode migrate --yes`.
+    lo aplica : --mode migrate (0.14.0->0.15.0)
+```
+
+`migrate` sin `--yes` no escribe nada, solo muestra qué haría:
+
+```
+$ verify_frame.py --mode migrate
+
+  [MIGRATE] IEF 0.14.0 -> 0.15.0
+    - 0.14.0->0.15.0: sin cambios en el estado (la version solo agrega campos)
+    - state.yml: ief_version (sin registrar; se asume 0.14.0) -> 0.15.0
+    - AGENTS.md: se inserta la seccion del IEF al principio; no se borra nada. Revisa despues si mas abajo quedan instrucciones del IEF duplicadas o viejas, y borralas tu
+
+  Simulacion: no se escribio nada. Para aplicarlo: --mode migrate --yes
+```
+
+Con `--yes` respalda antes de escribir (`state.yml.bak-0.14.0` y, si lo toca,
+`AGENTS.md.bak-0.14.0`) y aplica. Correrlo otra vez no hace nada.
+
+**El `AGENTS.md` del proyecto.** La parte del IEF la escribe el motor entre dos
+marcadores, y `migrate` la mantiene al día:
+
+```markdown
+<!-- IEF:INICIO v0.15.0 — generado por verify_frame.py; no editar dentro -->
+...
+<!-- IEF:FIN -->
+```
+
+Lo que el proyecto escriba fuera de los marcadores es suyo y nunca se toca. En un
+proyecto anterior a 0.15.0, cuyo `AGENTS.md` armó un agente a mano, `migrate` inserta la
+sección al principio y no borra nada: después conviene revisar si más abajo quedaron
+instrucciones del IEF viejas o duplicadas.
+
+**Un motor más viejo que el proyecto no escribe en él.** Si el proyecto se actualizó con
+un bundle más nuevo y alguien usa uno viejo, los modos que escriben se niegan y piden
+actualizar el bundle. Los de lectura funcionan, con un aviso.
+
 ## 21. El trabajo pequeño: `log`
 
 ### Para qué
@@ -2471,9 +2552,18 @@ python "$IEF/verify_frame.py" --mode approve-step --by "Ana"
 python "$IEF/verify_frame.py" --mode advance
 ```
 
-Si Luis ejecutara `approve-step --by "Ana"`, el motor no podría impedirlo: registra un
-nombre, no verifica una identidad. **La compuerta funciona porque el equipo es honesto con
-ella.** Por eso conviene que las firmas se revisen en el historial de vez en cuando.
+Si Luis ejecutara `approve-step --by "Ana"`, el motor registra un nombre, no verifica
+una identidad. Lo que sí hace desde 0.15.0 es dejar constancia del canal: una firma dada
+sin terminal queda como `declared`, y `doctor` las resume. Si el equipo lo decide, puede
+exigir que las firmas se den en una terminal, confirmando con el slug del incremento:
+
+```bash
+python "$IEF/verify_frame.py" --mode gate-policy --require-interactive on
+```
+
+No es seguridad criptográfica: protege contra la confusión (un agente que cree que el
+encargo equivale a una aprobación), no contra alguien que quiere falsificar la firma.
+**La compuerta sigue funcionando porque el equipo es honesto con ella.**
 
 ### Un contrato con forma estricta
 
@@ -2753,9 +2843,14 @@ puedes adelantar lo que quieras; lo que no puedes es marcar el ciclo como avanza
 `--increment` actúan sobre el foco, no sobre «el activo» (sección 12).
 
 ### `--increment` funciona igual en todos los comandos
-**No.** `approve-step` y `advance` lo aceptan pero **no lo leen**: actúan siempre sobre el
-foco. Con `approve-step`, eso significa que una firma puede caer sobre el incremento
-equivocado sin ningún error. Mueve el foco antes de aprobar o avanzar (secciones 27 y 29).
+**Sí, desde 0.15.0.** Hasta 0.14.0, `approve-step` y `advance` lo aceptaban sin leerlo y
+actuaban siempre sobre el foco: una firma podía caer sobre el incremento equivocado sin
+ningún error. Ahora actúan sobre el que pides y la salida lo nombra.
+
+### Una compuerta aprobada queda aprobada para siempre
+**No.** La firma guarda la huella del artefacto. Si el artefacto cambia después, la firma
+se vence y hay que volver a firmar (`--mode approve-step --increment <slug> --step <ref>`).
+Firmar los criterios de aceptación, por lo tanto, los congela.
 
 ### `PAUSED` y `BLOCKED` son lo mismo
 **No.** `PAUSED` es voluntario; `BLOCKED` es forzado y tiene un responsable, un tipo y una
@@ -2770,8 +2865,8 @@ compuertas, al promover se pide firma (sección 13).
 compuerta: exploraciones, prototipos, tareas y el `build` de `analysis` (sección 13).
 
 ### `state.yml` se puede editar a mano si sé lo que hago
-**No.** Todo cambio pasa por un comando, que verifica y deja rastro. La única excepción es
-migrar un proyecto desde una versión anterior del IEF, una sola vez (sección 6).
+**No.** Todo cambio pasa por un comando, que verifica y deja rastro. Incluso actualizar un
+proyecto a una versión nueva del IEF tiene el suyo: `--mode migrate` (sección 20).
 
 ### Para marcar un paso terminado, lo pongo en `state.yml`
 **No.** Para eso existe `complete-step`, que además verifica el artefacto antes de marcar.
@@ -2873,29 +2968,20 @@ con cualquier modo sin quejarse, así que una opción que no aparece en la fila 
 | Modo | Opciones | Qué hace |
 |---|---|---|
 | `complete-step` | `--step` · `--increment` · `--force` · `--reason` | Marca el paso `COMPLETED`, verificando antes el artefacto. `--force` exige `--reason` |
-| `approve-step` | `--by` | Registra la firma de una compuerta. **Siempre sobre el foco** |
-| `advance` | — | Pasa al siguiente paso. **Siempre sobre el foco** |
+| `approve-step` | `--by` · `--increment` · `--step` | Registra la firma de una compuerta, con la huella del artefacto y el canal. Con `--step`, vuelve a firmar un paso cuya firma se venció |
+| `advance` | `--increment` | Pasa al siguiente paso. No pasa sobre una firma vencida |
 | `rewind` | `--to-step` · `--reason` **(obligatorio)** · `--increment` | Retrocede, marcando `NEEDS_REVISION` el destino y lo posterior |
 
-> **⚠️ `approve-step` y `advance` ignoran `--increment`.** Actúan **siempre** sobre el
-> incremento que tiene el foco, aunque escribas otro. Medido con el foco en `002_beta`:
->
-> ```
-> $ verify_frame.py --mode approve-step --increment 001_alfa --by Ana
-> [APPROVED] paso 1: Charter
->
->   001_alfa   1_charter=COMPLETED      ← el que se pidió firmar: sigue sin firma
->   002_beta   1_charter=APPROVED       ← el que quedó firmado: otro
-> ```
->
-> Una firma puede caer sobre el incremento equivocado sin ningún error, y el mensaje ni
-> siquiera dice sobre cuál. Hasta que se corrija: **mueve el foco antes de aprobar o
-> avanzar**, y comprueba con `status` después.
->
-> ```bash
-> python "$IEF/verify_frame.py" --mode focus --increment 001_alfa
-> python "$IEF/verify_frame.py" --mode approve-step --by "Ana"
-> ```
+> Sin `--increment`, estos modos actúan sobre el incremento con el foco. Con varios
+> frentes abiertos, conviene pasarlo siempre.
+
+### Versiones y firmas
+
+| Modo | Opciones | Qué hace |
+|---|---|---|
+| `upgrade-notes` | `--json` | Qué cambió entre la versión del IEF del proyecto y la del motor, y qué hacer |
+| `migrate` | `--yes` | Lleva el proyecto a la versión del motor. Sin `--yes` solo muestra qué haría; con `--yes` respalda antes de escribir |
+| `gate-policy` | `--require-interactive on` o `off` | Exige, o no, que las compuertas se firmen desde una terminal. Apagarlo exige estar en una terminal |
 
 ### Gestionar un incremento
 
@@ -2999,11 +3085,11 @@ spec-kit.
 Lo que el IEF **no** hace hoy, o hace con alguna aspereza. Mejor saberlo antes de
 tropezar.
 
-**⚠️ `approve-step` y `advance` actúan siempre sobre el foco, y aceptan `--increment` sin
-leerlo.** Es el límite más serio de esta lista, porque afecta a las firmas: con el foco en
-un incremento, `approve-step --increment <otro> --by "Ana"` firma la compuerta del que
-tiene el foco, no la del que escribiste, sin ningún error. Hasta que se corrija, **mueve el
-foco antes de aprobar o avanzar** y comprueba con `status` (sección 27).
+**La firma interactiva no es un mecanismo de seguridad.** Distingue la firma que alguien
+dio escribiendo en una terminal de la que un programa registró por su cuenta, pero un
+proceso con una pseudoterminal puede simularla. Y la huella prueba que el contenido no
+cambió desde la firma, no quién firmó: eso requeriría firmas criptográficas
+([ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md)).
 
 **`adopt` no lee `--layout`.** Las carpetas que falten se crean siempre con los nombres de
 `flat`. En un proyecto con carpetas numeradas, revisa lo que crea antes de aceptar.

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesta
+Aceptada (2026-09-24)
 
 ## Contexto
 
@@ -251,3 +251,19 @@ Cada versión nueva agrega su fixture.
 - **Orden de implementación:** este ADR va antes que ADR-001. Así, los campos nuevos de la
   firma llegan a los proyectos como la primera entrada del registro de cambios, con su
   `que_hacer`.
+
+## Notas de implementación
+
+Implementado en 0.15.0. Precisiones respecto del texto aceptado; las dos primeras, por la
+misma razón: sin ellas, la decisión no cumplía su propósito.
+
+- **Qué significa `ief_version`.** El punto 3 dice «la versión del motor que lo escribió
+  por última vez». Tomado al pie de la letra, cualquier comando que escribe (`advance`,
+  `log`) actualizaría el campo, el aviso desaparecería en el primer uso y el proyecto
+  nunca se migraría. Se implementó como **la versión con la que el proyecto está al
+  día**: la escriben solo `init`, `adopt` y `migrate`.
+- **`adopt` también escribe la sección del `AGENTS.md`**, igual que `init`. El punto 7
+  solo nombraba `init`, pero `adopt` es la otra forma de empezar a usar el IEF, y dejarla
+  fuera habría reproducido el problema que este ADR resuelve.
+- `migrate` respalda también `AGENTS.md` (`AGENTS.md.bak-<versión>`) cuando lo modifica,
+  además de `state.yml`. Es más conservador que lo decidido y no cambia nada más.

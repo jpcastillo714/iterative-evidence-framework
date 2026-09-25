@@ -1,5 +1,13 @@
 # AGENTS.md: Reglas y Contexto del Proyecto (IEF)
 
+> Esta sección la escribe el motor del IEF y la mantiene al día `--mode migrate`. No la
+> edites: se reescribe. Las reglas propias del proyecto van **fuera** de los marcadores.
+
+> **Primero, en cada sesión:** `--mode status --json`. Si `upgrade` no es `null`, el
+> bundle cambió desde la última vez. Antes de cualquier otra cosa, muéstrale al usuario
+> `--mode upgrade-notes` y propón `--mode migrate` (sin `--yes` solo muestra qué haría).
+> La migración la aplica el usuario, no tú.
+
 ## 1. Proyecto
 * **Nombre:** {{INITIATIVE_NAME}}
 * **ID:** {{INITIATIVE_ID}}
@@ -34,11 +42,13 @@ artefacto está en otro sitio o con otro nombre. No inventes subcarpetas.
   | Quiero... | Modo |
   |---|---|
   | Dar un paso por terminado (re-verifica el artefacto) | `--mode complete-step` |
-  | Registrar la aprobación de una compuerta | `--mode approve-step --by "<usuario>"` |
+  | Registrar la firma de una compuerta (la da el usuario) | `--mode approve-step --increment <slug> --by "<usuario>"` |
   | Pasar al siguiente paso | `--mode advance` |
   | Volver atrás porque la especificación estaba mal | `--mode rewind --to-step <ref> --reason "..."` |
   | Pausar, bloquear, completar o abandonar un incremento | `--mode set-status --increment <slug> --status <X>` |
   | Cambiar el incremento sobre el que operan los comandos | `--mode focus --increment <slug>` |
+  | Ver qué cambió al actualizarse el IEF | `--mode upgrade-notes` |
+  | Actualizar el proyecto a la versión del motor (lo aplica el usuario) | `--mode migrate`, y después `--mode migrate --yes` |
 
   Si crees que necesitas editarlo a mano, falta un modo: repórtalo en vez de abrir el archivo.
 
@@ -49,11 +59,11 @@ artefacto está en otro sitio o con otro nombre. No inventes subcarpetas.
 3. Producir el artefacto en el directorio del incremento (ver §2).
 4. `--mode verify-step` y después `--mode complete-step`.
 5. Si el paso lleva compuerta: presentar el artefacto al usuario y **esperar su
-   aprobación explícita**. Solo entonces `--mode approve-step --by "<usuario>"`.
-6. `--mode advance`.
+   aprobación explícita**. Solo entonces `--mode approve-step --increment <slug> --by "<usuario>"`.
+6. `--mode advance --increment <slug>`.
 
-Si hay varios frentes abiertos, `advance`, `approve-step` y `rewind` caen sobre el
-**enfocado**: compruébalo antes, o pasa `--increment`.
+Sin `--increment`, los comandos caen sobre el incremento **enfocado**. Con varios frentes
+abiertos, pásalo siempre.
 
 ## 5. Compuertas humanas
 
@@ -66,6 +76,15 @@ listo para que diga «sí» o «cambia esto».
 
 Qué pasos llevan compuerta lo decide el preset: consúltalo en `status --json`
 (`human_gate`), no lo supongas.
+
+**Una firma dice «aprobé esto».** Guarda la huella del artefacto: si el artefacto cambia
+después, la firma se **vence**, y `check-gates`, `doctor` y `advance` lo detienen. Ante una
+aprobación vencida, muéstrale al usuario qué cambió y pídele que lo revise y vuelva a
+firmar (`--mode approve-step --increment <slug> --step <ref>`). No vuelvas a firmar tú.
+Firmar los criterios de aceptación los congela: si hay que cambiarlos, se vuelven a firmar.
+
+Si el proyecto exige firmar desde una terminal (`--mode gate-policy`), `approve-step`
+se negará a firmar desde tu entorno. Es a propósito: pídele al usuario que lo ejecute él.
 
 ## 6. Ciclos
 
@@ -121,7 +140,8 @@ python "$IEF/verify_frame.py" --mode doctor
 ```
 
 `doctor` revela lo que `status` no muestra: estado ilegible, bloqueos vencidos,
-compuertas terminadas sin aprobar, entradas externas que invalidan reglas vigentes.
+compuertas terminadas sin aprobar, firmas vencidas, entradas externas que invalidan reglas
+vigentes y si el proyecto está desactualizado respecto del motor.
 Si reporta `FAIL`, arréglalo antes de avanzar ningún paso.
 
 ## 11. Reglas específicas del preset

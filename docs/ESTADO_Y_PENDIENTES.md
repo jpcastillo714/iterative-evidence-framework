@@ -40,32 +40,32 @@ de diseño que este repositorio ya cometió una vez:
 
 Estado medido el 2026-09-24 con los cuatro chequeos del bundle:
 
-- **Versión** 0.14.0 en `bundle.yml` y `extension/extension.yml` (un test exige que
-  coincidan). `schema_version` del `state.yml` que escribe el motor: **4.0**.
+- **Versión** 0.15.0 en `bundle.yml` y `extension/extension.yml` (un test exige que
+  coincidan). `schema_version` del `state.yml` que escribe el motor: **4.0** (0.15.0
+  solo agregó campos). Cada proyecto guarda además su `ief_version`.
 - **6 presets:** `generic`, `research`, `product`, `analysis`, `modeling` (mixin
   abstracto) y `product-modeling` (composición `product` + `modeling`).
 - **4 ciclos:** `task` (2 pasos, 0 compuertas), `exploration` (4, 0), `prototype` (4, 1),
   `build` (7, 3 — 8 y 4 cuando entra el mixin `modeling`).
 - **104 pasos** con sus instrucciones y plantillas en los 6 presets.
-- **23 comandos** `/speckit.ief.*` declarados en `extension/extension.yml`, todos con su
+- **25 comandos** `/speckit.ief.*` declarados en `extension/extension.yml`, todos con su
   archivo en `extension/commands/`.
-- Las skills globales `ief-workflow` e `ief-authoring` pasan sus 44 comprobaciones
+- Las skills globales `ief-workflow` e `ief-authoring` pasan sus 49 comprobaciones
   contra el `--help` real del motor.
 
 ---
 
-## 3. Decisiones propuestas, pendientes de aprobación
+## 3. Decisiones de diseño
 
-El árbol quedó limpio el 2026-09-24 (commit `d3b19d4`). Lo que sigue son **propuestas**:
-no se implementa nada hasta que quien mantiene el repositorio las acepte.
+Todas en [`docs/decisiones/`](decisiones/README.md), con su evidencia en
+[`REFERENCIAS.md`](REFERENCIAS.md).
 
-| ADR | Qué propone | Por qué importa |
+| ADR | Estado | Qué quedó implementado (0.15.0) |
 |---|---|---|
-| [ADR-002](decisiones/ADR-002-compatibilidad-entre-versiones.md) | Política de versiones con período de obsolescencia, `CHANGELOG.md` y `core/cambios.yml`, `ief_version` en `state.yml`, `--mode upgrade-notes` y `--mode migrate`, sección con marcadores en el `AGENTS.md` de cada proyecto, y fixtures por versión | Hoy un proyecto largo no tiene cómo saber qué cambió al actualizar el bundle, y su `AGENTS.md` (que arma el agente, no el motor) queda enseñando comandos viejos. Va primero: los cambios de ADR-001 deben llegar a los proyectos por este canal. |
-| [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md) | La firma guarda la huella SHA-256 del artefacto, `check-gates` detecta aprobaciones vencidas, se registra el canal (`interactive`/`declared`) y cada proyecto puede exigir el interactivo. Corrige además el §5.1 | Reproducido: un proceso sin terminal firma a nombre de otra persona, el artefacto cambia después y `check-gates` responde que todo está aprobado. |
+| [ADR-002](decisiones/ADR-002-compatibilidad-entre-versiones.md) | Aceptada e implementada | `ief_version` en `state.yml`; `core/cambios.yml` y `CHANGELOG.md`, validados por `check-bundle`; `--mode upgrade-notes` y `--mode migrate`; `upgrade` en `status --json`; la guardia que impide a un motor viejo escribir en un proyecto nuevo; la sección del motor en `AGENTS.md`; el fixture `tests/fixtures/proyecto-0.14.0.yml` |
+| [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md) | Aceptada e implementada | Huella SHA-256 del artefacto en cada firma; firmas vencidas en `check-gates`, `doctor`, `advance` y `status`; `approved_via`; `--mode gate-policy`; `--increment` respetado en `approve-step` y `advance` |
 
-Las dos se apoyan en [`REFERENCIAS.md`](REFERENCIAS.md), cuyas entradas se verificaron
-contra la fuente primaria el 2026-09-24.
+No hay decisiones pendientes de aprobación.
 
 ---
 
@@ -81,13 +81,24 @@ python core/scripts/verify_frame.py --mode check-steps
 pytest tests/ -q
 ```
 
+Si el cambio altera el comportamiento para los proyectos existentes (ADR-002):
+
+- una entrada en `core/cambios.yml`, con su `que_hacer` escrito para un agente;
+- la misma, para personas, en `CHANGELOG.md`;
+- si se retira algo, antes tiene que haberse anunciado como `obsoleto` en una versión
+  anterior (`check-bundle` lo hace cumplir);
+- si el estado cambia de forma, una migración en `MIGRACIONES` (`verify_frame.py`) con su
+  test;
+- al publicar una versión, su fixture en `tests/fixtures/proyecto-<version>.yml`,
+  generado con **ese** motor, no a mano.
+
 Y, si tocaste modos, flags o rutas de `core/`:
 
 ```bash
 python ~/.claude/skills/ief-authoring/scripts/verificar_skills.py
 ```
 
-La suite son **245 tests y tarda unos cuatro minutos**: casi cada uno lanza el motor como
+La suite son **281 tests y tarda unos cinco minutos**: casi cada uno lanza el motor como
 subproceso sobre un proyecto temporal. No la interrumpas pensando que se colgó. Hay CI en
 GitHub Actions que corre lo mismo.
 
@@ -108,44 +119,14 @@ python core/scripts/verify_frame.py --mode init --project-dir /tmp/prueba \
 
 Todos reproducidos ejecutando el motor, no leyendo el código. En orden de gravedad.
 
-### 5.1 `approve-step` y `advance` aceptan `--increment` y no lo leen
-
-> Corrección propuesta en [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md), punto 6.
-
-**Lo más grave que hay abierto.** Ambos actúan siempre sobre el incremento **enfocado**.
-El `argparse` acepta el flag, así que no hay error ni aviso.
-
-Medido el 2026-09-24, con el foco en `002_beta` y los dos charters completados:
-
-```
-python verify_frame.py --mode approve-step --increment 001_alfa --by Ana
-[APPROVED] paso 1: Charter
-
-state.yml →  001_alfa  1_charter: COMPLETED    ← el que se pidió firmar
-             002_beta  1_charter: APPROVED     ← el que quedó firmado
-```
-
-Una **firma humana** queda registrada en el incremento equivocado y el mensaje no dice en
-cuál. Es el mismo fallo que ya se corrigió en `rewind`, pero con consecuencias peores:
-las compuertas son el único punto del framework donde interviene una persona.
-
-Está en el despacho de `main()`: `cmd_advance(proj)` y `cmd_approve_step(proj, args.by)`
-no reciben `args.increment`, y sus firmas no tienen el parámetro. La corrección es la que
-ya se aplicó a `rewind`: pasar el slug, resolverlo con `get_increment(state, slug)` y
-nombrar el incremento en la salida. Necesita tests de regresión para los dos modos.
-
-**Si lo corriges, actualiza también** los avisos de `docs/GUIA_DE_ESTUDIO.md` (secciones
-26, 27 y 29), la skill `ief-workflow` y el `agents-template.md`, que hoy dicen «cae sobre
-el enfocado: compruébalo antes».
-
-### 5.2 `adopt` ignora `--layout`
+### 5.1 `adopt` ignora `--layout`
 
 `cmd_adopt(project_dir, preset_id, aplicar)` no recibe el layout, así que las carpetas
 que falten se crean siempre con los nombres de `flat`. Un proyecto con carpetas numeradas
 que se adopta pidiendo `--layout numbered` termina con ambas nomenclaturas. Mientras no
 se corrija, en esos casos conviene adoptar y mover las carpetas a mano con `role_paths`.
 
-### 5.3 Nada comprueba que los comandos nombren presets y ciclos que existen
+### 5.2 Nada comprueba que los comandos nombren presets y ciclos que existen
 
 Los cuatro chequeos validan que los comandos declarados en `bundle.yml` **existan como
 archivo**, pero no lo que dicen dentro. Por eso `ief.init.md` pasó tres versiones
@@ -173,6 +154,8 @@ propósito.
 | No hay `migrate-layout` | Cambiar de nomenclatura a mitad de proyecto es trabajo manual más `role_paths`. |
 | `adopt` se niega si ya existe `state.yml` | Re-adoptar un proyecto migrado a medias exige borrar el estado, y eso pierde el historial. |
 | `modeling` es abstracto | `--preset modeling` y `--preset analysis,modeling` se rechazan. `product-modeling` cubre la composición con `product`; la de `analysis` no existe como preset elegible. |
+| La firma `interactive` no es seguridad | Un proceso con pseudoterminal puede simularla, y la huella da integridad, no autenticidad. Distingue la firma que alguien escribió de la que un programa registró, que es la confusión real (ADR-001). |
+| `require_interactive` es `false` por defecto | Los proyectos que no lo activen siguen aceptando firmas `declared`; `doctor` las resume. Cambiar el valor por defecto exige otro ADR y el período de aviso de ADR-002. |
 | El motor solo **avisa** de la rama de git, nunca la cambia | Un incremento con `branch` declarado puede trabajarse desde otra rama; queda en el aviso y en `doctor`. |
 
 ---
@@ -250,9 +233,10 @@ al crearlos. Una convención nueva no les llega sola: hay que añadirla en cada 
 
 Un cambio en el motor no se queda en el motor:
 
-- **Los proyectos ya adoptados** tienen un `state.yml` con `schema_version: 4.0` y un
-  `AGENTS.md` que es una **copia** de la plantilla del momento en que se crearon. Cambiar
-  un modo o un flag no actualiza esas copias.
+- **Los proyectos ya adoptados** tienen un `state.yml` con `schema_version: 4.0`. Desde
+  0.15.0, la parte del IEF en su `AGENTS.md` la escribe el motor entre marcadores y
+  `--mode migrate` la actualiza. Los proyectos anteriores la reciben al migrar; hasta
+  entonces conservan la copia que armó un agente, y `doctor` lo avisa.
 - **Las skills globales** `ief-workflow` (la que usan los proyectos) e `ief-authoring` (la
   que usa este repositorio) documentan modos, flags y rutas. Si cambias uno y no la skill,
   un agente ejecutará un comando que ya no existe: es un fallo silencioso, porque la skill
@@ -267,15 +251,13 @@ Un cambio en el motor no se queda en el motor:
 
 ## 10. Orden sugerido si vas a trabajar en esto
 
-1. Esperar la decisión sobre ADR-002 y ADR-001 (§3). Si se aceptan, implementar
-   **primero ADR-002** y después ADR-001, cada uno con sus tests, `CHANGELOG.md` y la
-   entrada de `core/cambios.yml`.
-2. Corregir §5.2 (`adopt --layout`). Es un fallo, no cambia el comportamiento
-   documentado: no necesita ADR.
-3. Añadir el test de §5.3, que evita que la documentación de los comandos vuelva a
+1. Corregir §5.1 (`adopt --layout`). Es un fallo, no cambia el comportamiento
+   documentado: no necesita ADR, pero sí su entrada `corregido` en `core/cambios.yml`.
+2. Añadir el test de §5.2, que evita que la documentación de los comandos vuelva a
    desincronizarse en silencio.
-4. Consultar al usuario antes de tocar §7: es un cambio de significado del worklog, y
+3. Consultar al usuario antes de tocar §7: es un cambio de significado del worklog, y
    por lo tanto necesita ADR.
+4. Seguir con las mejoras candidatas a ADR, una por ciclo.
 
 **Camino a 1.0.0.** Decisión de quien mantiene el repositorio (2026-09-24): la 1.0.0 se
 publica **al terminar** la serie de cambios que hoy se evalúa, no antes. Esa serie son

@@ -24,15 +24,19 @@ Modos
     check-preset     valida que el preset este bien formado
     check-bundle     valida la estructura del bundle
     advance          avanza al siguiente paso del incremento activo
-    approve-step     marca un paso con compuerta como APPROVED
+    approve-step     firma un paso con compuerta (guarda la huella del artefacto)
+    gate-policy      exige, o no, que las compuertas se firmen desde una terminal
     set-status       cambia el estado de un incremento
     rewind           retrocede a un paso anterior
     merge-increment  promueve los artefactos del incremento a initiative/specs/
+    upgrade-notes    que cambio entre la version del proyecto y la del motor
+    migrate          lleva el proyecto a la version del motor (con --yes; si no, simula)
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -347,6 +351,273 @@ def paso_actual(preset: Preset, inc: Dict[str, Any]) -> Paso:
     return paso
 
 
+# ─── Versiones y migracion (ADR-002) ─────────────────────────────────────────
+#
+# Un proyecto dura meses y el bundle cambia mientras tanto. Sin esto, un proyecto no
+# tenia forma de saber que cambio entre la version con la que se creo y la actual, y
+# el agente que lo operaba seguia las instrucciones de su AGENTS.md aunque ya fueran
+# viejas. Ver docs/decisiones/ADR-002-compatibilidad-entre-versiones.md.
+
+# La ultima version que no registraba `ief_version`. Un proyecto sin el campo se
+# trata como escrito por ella.
+VERSION_SIN_REGISTRO = "0.14.0"
+
+TIPOS_DE_CAMBIO = {"añadido", "cambiado", "obsoleto", "retirado", "corregido"}
+AFECTA = {"state", "modo", "flag", "ruta", "plantilla", "agents"}
+
+# Los modos que escriben en el proyecto. Un motor mas viejo que el proyecto no puede
+# usarlos: escribiria un estado con un vocabulario que no conoce entero.
+MODOS_QUE_ESCRIBEN = {
+    "new-increment", "log", "focus", "record-input", "advance", "complete-step",
+    "approve-step", "set-status", "rewind", "merge-increment", "draft-report",
+    "migrate", "gate-policy",
+}
+
+
+def version_motor() -> str:
+    """La version del bundle. Una sola fuente: bundle.yml (extension.yml debe coincidir)."""
+    with open(BUNDLE_DIR / "bundle.yml", "r", encoding="utf-8") as f:
+        doc = yaml.safe_load(f) or {}
+    return str((doc.get("bundle") or {}).get("version") or "0.0.0")
+
+
+def _v(texto: Any) -> Tuple[int, int, int]:
+    """'0.15.0' -> (0, 15, 0). Lo que no sea numero se ignora."""
+    partes = [int(x) for x in re.findall(r"\d+", str(texto))[:3]]
+    partes += [0] * (3 - len(partes))
+    return partes[0], partes[1], partes[2]
+
+
+def version_proyecto(state: Dict[str, Any]) -> str:
+    return str(state.get("ief_version") or VERSION_SIN_REGISTRO)
+
+
+def cargar_cambios() -> List[Dict[str, Any]]:
+    ruta = BUNDLE_DIR / "core" / "cambios.yml"
+    if not ruta.exists():
+        return []
+    with open(ruta, "r", encoding="utf-8") as f:
+        doc = yaml.safe_load(f) or {}
+    return list(doc.get("versiones") or [])
+
+
+def cambios_entre(desde: str, hasta: str) -> List[Dict[str, Any]]:
+    """Los cambios de las versiones en (desde, hasta], de la mas vieja a la mas nueva."""
+    res = []
+    for bloque in sorted(cargar_cambios(), key=lambda b: _v(b.get("version"))):
+        v = str(bloque.get("version"))
+        if _v(desde) < _v(v) <= _v(hasta):
+            for c in bloque.get("cambios") or []:
+                res.append({"version": v, **c})
+    return res
+
+
+def _migrar_0_14_a_0_15(state: Dict[str, Any]) -> List[str]:
+    """0.15.0 solo agrega campos: no hay nada que convertir en el estado.
+
+    Las firmas anteriores quedan sin huella a proposito. Calcularla ahora certificaria
+    que el contenido de hoy es el que se aprobo entonces, y eso nadie puede saberlo.
+    """
+    return []
+
+
+# (desde, hasta, id, funcion). El id es el que cita `migracion:` en core/cambios.yml.
+MIGRACIONES = [
+    ("0.14.0", "0.15.0", "0.14.0->0.15.0", _migrar_0_14_a_0_15),
+]
+
+
+def migraciones_pendientes(desde: str, hasta: str) -> List[Tuple[str, str, str, Any]]:
+    return [m for m in MIGRACIONES if _v(desde) <= _v(m[0]) and _v(m[1]) <= _v(hasta)]
+
+
+def info_actualizacion(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Lo que le falta a este proyecto para estar al dia con el motor, o None."""
+    desde, hasta = version_proyecto(state), version_motor()
+    if _v(desde) >= _v(hasta):
+        return None
+    return {
+        "from": desde,
+        "to": hasta,
+        "changes": cambios_entre(desde, hasta),
+        "pending_migrations": [m[2] for m in migraciones_pendientes(desde, hasta)],
+    }
+
+
+def _proyecto_mas_nuevo(state: Dict[str, Any]) -> Optional[str]:
+    """Si el proyecto lo escribio un motor mas nuevo que este, dice por que; si no, None."""
+    motor = version_motor()
+    if _v(version_proyecto(state)) > _v(motor):
+        return "el proyecto esta en IEF %s y este motor es %s" % (version_proyecto(state), motor)
+    esquema = state.get("schema_version")
+    if esquema and _v(esquema)[0] > _v(SCHEMA_ACTUAL)[0]:
+        return ("state.yml declara schema_version %s y este motor solo entiende hasta la "
+                "serie %s.x" % (esquema, _v(SCHEMA_ACTUAL)[0]))
+    return None
+
+
+def guardia_de_version(project_dir: Path, modo: str, como_json: bool) -> None:
+    """Se ejecuta antes de cada modo que opera sobre un proyecto.
+
+    Si el proyecto es mas nuevo que el motor, los modos que escriben se niegan: un motor
+    viejo no conoce todos los campos y los reescribiria mal. Si es mas viejo, se avisa
+    en una linea por stderr, que no ensucia las salidas que otros programas leen.
+    """
+    ruta = ruta_state(project_dir)
+    if not ruta.exists():
+        return
+    try:
+        state = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return                                  # el modo lo reportara con su propio error
+    if not isinstance(state, dict):
+        return
+
+    nuevo = _proyecto_mas_nuevo(state)
+    if nuevo:
+        if modo in MODOS_QUE_ESCRIBEN:
+            fallar("%s. Actualiza el bundle antes de escribir en este proyecto: un motor "
+                   "mas viejo no conoce todos sus campos y podria dejarlo inconsistente."
+                   % nuevo)
+        print("[IEF] Aviso: %s. Los modos de lectura funcionan, pero pueden no mostrar "
+              "todo." % nuevo, file=sys.stderr)
+        return
+
+    if modo in {"upgrade-notes", "migrate"} or como_json:
+        return
+    info = info_actualizacion(state)
+    if info:
+        print("[IEF] Este proyecto esta al dia con IEF %s y el motor es %s: hay %d "
+              "cambio(s) que lo afectan. Revisalos con --mode upgrade-notes y aplicalos "
+              "con --mode migrate." % (info["from"], info["to"], len(info["changes"])),
+              file=sys.stderr)
+
+
+# La seccion del IEF dentro del AGENTS.md del proyecto. Antes la armaba el agente a
+# mano, asi que cada proyecto tenia una copia distinta, sin version, que nadie podia
+# actualizar. Ahora la escribe el motor entre dos marcadores, y lo de fuera es del
+# proyecto: nunca se toca.
+MARCA_INICIO = "<!-- IEF:INICIO v%s — generado por verify_frame.py; no editar dentro -->"
+RE_INICIO = re.compile(r"<!-- IEF:INICIO v([\d.]+)[^\n]*?-->")
+MARCA_FIN = "<!-- IEF:FIN -->"
+
+
+def ruta_agents(project_dir: Path) -> Path:
+    return project_dir / "AGENTS.md"
+
+
+def leer_texto_exacto(ruta: Path) -> Optional[str]:
+    """Lee sin traducir fines de linea: lo que no es nuestro se devuelve byte a byte."""
+    if not ruta.exists():
+        return None
+    with open(ruta, "r", encoding="utf-8", newline="") as f:
+        return f.read()
+
+
+def escribir_texto_exacto(ruta: Path, texto: str) -> None:
+    with open(ruta, "w", encoding="utf-8", newline="") as f:
+        f.write(texto)
+
+
+def bloque_agents(state: Dict[str, Any], preset: Preset) -> str:
+    """La seccion del motor, ya renderizada y entre sus marcadores."""
+    plantilla = (BUNDLE_DIR / "core" / "templates" / "agents-template.md").read_text(
+        encoding="utf-8")
+    frag = BUNDLE_DIR / "presets" / preset.id / "agents-fragment.md"
+    fragmento = frag.read_text(encoding="utf-8").strip() if frag.exists() else ""
+    ini = state.get("initiative") or {}
+    cuerpo = (plantilla
+              .replace("{{INITIATIVE_NAME}}", str(ini.get("name", "")))
+              .replace("{{INITIATIVE_ID}}", str(ini.get("id", "")))
+              .replace("{{PRESET_NAME}}", "%s (%s)" % (preset.id, " -> ".join(preset.cadena)))
+              .replace("{{PRESET_FRAGMENT}}", fragmento))
+    return "%s\n%s\n%s\n" % (MARCA_INICIO % version_motor(), cuerpo.strip(), MARCA_FIN)
+
+
+def version_de_bloque(texto: Optional[str]) -> Optional[str]:
+    m = RE_INICIO.search(texto or "")
+    return m.group(1) if m and MARCA_FIN in texto[m.end():] else None
+
+
+def agents_propuesto(actual: Optional[str], bloque: str) -> Tuple[str, str]:
+    """(texto nuevo, accion): crear | reemplazar | insertar | igual.
+
+    - Sin archivo: se crea con la seccion.
+    - Con marcadores: se reemplaza solo lo que hay entre ellos.
+    - Sin marcadores: la seccion se inserta al principio y no se borra nada. Puede
+      quedar alguna instruccion duplicada mas abajo; eso lo decide la persona.
+    """
+    if actual is None:
+        return bloque, "crear"
+    if "\r\n" in actual:                     # respeta los fines de linea del archivo
+        bloque = bloque.replace("\n", "\r\n")
+    m = RE_INICIO.search(actual)
+    fin = actual.find(MARCA_FIN, m.end()) if m else -1
+    if m and fin >= 0:
+        nuevo = actual[:m.start()] + bloque.rstrip("\r\n") + actual[fin + len(MARCA_FIN):]
+        return nuevo, ("igual" if nuevo == actual else "reemplazar")
+    salto = "\r\n" if "\r\n" in actual else "\n"
+    return bloque + salto + actual, "insertar"
+
+
+# ─── Firmas de las compuertas (ADR-001) ──────────────────────────────────────
+#
+# Una firma dice «aprobe ESTO». Hasta 0.14.0 guardaba quien y cuando, pero no que: el
+# artefacto podia cambiar despues y la compuerta seguia aprobada. Ahora guarda la
+# huella del artefacto y el canal por el que se dio. Ver
+# docs/decisiones/ADR-001-firma-humana-ligada-al-contenido.md.
+
+def huella(ruta: Path) -> Optional[str]:
+    """SHA-256 del contenido, con los fines de linea normalizados.
+
+    Sin normalizar, clonar el proyecto en otro sistema operativo (git convierte LF y
+    CRLF) venceria todas las firmas sin que nadie hubiera cambiado una palabra.
+    """
+    if not ruta.is_file():
+        return None
+    return "sha256:" + hashlib.sha256(ruta.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def estado_de_firma(
+    project_dir: Path, preset: Preset, inc: Dict[str, Any], paso: Paso
+) -> Tuple[str, Optional[str]]:
+    """(estado, ruta del artefacto) de la firma de un paso APPROVED.
+
+    vigente       la huella coincide con el artefacto de hoy
+    vencida       el artefacto cambio despues de la firma
+    desaparecido  el artefacto firmado ya no existe
+    sin_huella    firma anterior a 0.15.0: no se puede comprobar
+    sin_artefacto el paso no produce artefacto: no hay nada que comparar
+    """
+    firma = (inc.get("approvals") or {}).get(paso.clave) or {}
+    rel = preset.ruta_artefacto(inc.get("slug", ""), paso)
+    if "artifact_sha256" not in firma:
+        return "sin_huella", rel
+    esperado = firma.get("artifact_sha256")
+    if not esperado or not rel:
+        return "sin_artefacto", rel
+    actual = huella(project_dir / rel)
+    if actual is None:
+        return "desaparecido", rel
+    return ("vigente" if actual == esperado else "vencida"), rel
+
+
+def _hay_terminal() -> bool:
+    """Hay una persona en una terminal: entrada y salida estandar lo son.
+
+    No es seguridad: un proceso con una pseudoterminal puede simularlo. Distingue la
+    firma que alguien dio escribiendo, de la que un programa registro por su cuenta.
+    """
+    try:
+        return sys.stdin.isatty() and sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def exige_firma_interactiva(state: Dict[str, Any]) -> bool:
+    return bool(((state.get("initiative") or {}).get("gates") or {}).get("require_interactive"))
+
+
 # ─── Validacion de artefactos ────────────────────────────────────────────────
 
 PRIORIDADES = {"critical", "high", "medium", "low"}
@@ -614,6 +885,7 @@ def cmd_init(
     ident = re.sub(r"[^A-Z0-9-]", "", nombre.upper().replace(" ", "-"))[:24]
     state = {
         "schema_version": SCHEMA_ACTUAL,
+        "ief_version": version_motor(),
         "initiative": {
             "id": ident or "PROYECTO",
             "name": nombre,
@@ -630,6 +902,7 @@ def cmd_init(
         "preset": preset.id, "layout": layout.id, "cadena": preset.cadena,
     })
     save_state(state, state_file)
+    accion_agents = escribir_agents(project_dir, state, preset)
 
     print()
     print("[INIT] %s" % nombre)
@@ -651,7 +924,27 @@ def cmd_init(
         print("       Escribela antes del primer incremento: son los principios bajo los")
         print("       que trabajaras, y las reglas que descubras viviran debajo.")
     print()
+    print("       AGENTS.md: %s" % DESCRIPCION_ACCION_AGENTS[accion_agents])
+    print()
     print("Siguiente: --mode new-increment --type build|exploration|prototype --name '...'")
+
+
+DESCRIPCION_ACCION_AGENTS = {
+    "crear": "creado con la seccion del IEF",
+    "reemplazar": "seccion del IEF actualizada; lo escrito fuera de los marcadores no se toco",
+    "insertar": ("seccion del IEF insertada al principio; no se borro nada. Revisa si mas "
+                 "abajo quedaron instrucciones del IEF duplicadas"),
+    "igual": "la seccion del IEF ya estaba al dia",
+}
+
+
+def escribir_agents(project_dir: Path, state: Dict[str, Any], preset: Preset) -> str:
+    """Escribe o actualiza la seccion del motor en AGENTS.md. Devuelve la accion."""
+    ruta = ruta_agents(project_dir)
+    nuevo, accion = agents_propuesto(leer_texto_exacto(ruta), bloque_agents(state, preset))
+    if accion != "igual":
+        escribir_texto_exacto(ruta, nuevo)
+    return accion
 
 
 # Sinonimos por rol. No pretenden ser exhaustivos: pretenden acertar en los nombres
@@ -806,6 +1099,7 @@ def cmd_adopt(project_dir: Path, preset_id: str, aplicar: bool) -> None:
 
     state = {
         "schema_version": SCHEMA_ACTUAL,
+        "ief_version": version_motor(),
         "initiative": {
             "id": re.sub(r"[^A-Z0-9-]", "", project_dir.name.upper())[:24] or "PROYECTO",
             "name": project_dir.name,
@@ -821,12 +1115,14 @@ def cmd_adopt(project_dir: Path, preset_id: str, aplicar: bool) -> None:
     }
     record_history(state, "ADOPT", {"preset": preset.id, "mapeo": mapeo})
     save_state(state, ruta_state(project_dir))
+    accion_agents = escribir_agents(project_dir, state, preset)
 
     print()
     print("  Adoptado. %d carpeta(s) existentes reconocidas, %d creada(s)."
           % (len(mapeo), len(creados)))
     for c in creados:
         print("    nueva: %s" % c)
+    print("  AGENTS.md: %s" % DESCRIPCION_ACCION_AGENTS[accion_agents])
     print()
     print("  Siguiente: revisa initiative/specs/constitution.md y abre un incremento.")
 
@@ -1062,6 +1358,11 @@ def cmd_status(project_dir: Path, como_json: bool) -> None:
     if como_json:
         salida = {
             "schema_version": state.get("schema_version"),
+            "ief_version": version_proyecto(state),
+            "engine_version": version_motor(),
+            # Si no es null, el agente debe mostrarselo al usuario antes de otra cosa:
+            # que cambio, que hacer, y que `--mode migrate` lo aplica.
+            "upgrade": info_actualizacion(state),
             "preset": preset.id,
             "preset_chain": preset.cadena,
             "layout": (state.get("initiative") or {}).get("layout"),
@@ -1086,6 +1387,13 @@ def cmd_status(project_dir: Path, como_json: bool) -> None:
                         "ref": p.ref, "key": p.clave, "name": p.nombre,
                         "human_gate": p.human_gate,
                         "status": (inc.get("steps") or {}).get(p.clave, "PENDING"),
+                        # vigente | vencida | desaparecido | sin_huella | sin_artefacto,
+                        # o null si el paso no esta firmado.
+                        "signature": (
+                            estado_de_firma(project_dir, preset, inc, p)[0]
+                            if p.human_gate
+                            and (inc.get("steps") or {}).get(p.clave) == "APPROVED"
+                            else None),
                     }
                     for p in pasos
                 ],
@@ -1100,9 +1408,10 @@ def cmd_status(project_dir: Path, como_json: bool) -> None:
 
     print()
     print("  IEF — %s" % ini.get("name", "sin nombre"))
-    print("  preset %s (%s) · layout %s · schema %s"
+    print("  preset %s (%s) · layout %s · schema %s · IEF %s"
           % (preset.id, " -> ".join(preset.cadena),
-             ini.get("layout", "?"), state.get("schema_version", "?")))
+             ini.get("layout", "?"), state.get("schema_version", "?"),
+             version_proyecto(state)))
     print("  foco: %s" % (foco or "(ninguno)"))
     if len(activos) > limite:
         print("  [!] %d incrementos ACTIVE (limite blando %d)" % (len(activos), limite))
@@ -1129,6 +1438,10 @@ def cmd_status(project_dir: Path, como_json: bool) -> None:
             st = (inc.get("steps") or {}).get(p.clave, "PENDING")
             aqui = "<--" if str(inc.get("current_step")) == p.ref else ""
             gate = " (compuerta)" if p.human_gate else ""
+            if p.human_gate and st == "APPROVED":
+                firma = estado_de_firma(project_dir, preset, inc, p)[0]
+                if firma in {"vencida", "desaparecido"}:
+                    gate = " (compuerta; firma %s)" % firma
             print("      %s %2s. %-28s %-15s%s %s"
                   % (STEP_ICONS.get(st, "?"), p.ref, p.nombre, st, gate, aqui))
 
@@ -1219,16 +1532,33 @@ def cmd_check_gates(project_dir: Path) -> None:
             revisados += 1
             estado = (inc.get("steps") or {}).get(p.clave, "PENDING")
             if estado == "APPROVED":
-                print(f"  PASS  {slug} · paso {p.ref} ({p.nombre}) APPROVED")
+                # Una firma dice «aprobe ESTO». Si ESTO ya no es lo que hay, la
+                # compuerta no esta aprobada, aunque el estado diga APPROVED.
+                firma, rel = estado_de_firma(project_dir, preset, inc, p)
+                if firma == "vencida":
+                    print(f"  FAIL  {slug} · paso {p.ref} ({p.nombre}) APPROVED, pero {rel} "
+                          f"cambio despues de la firma")
+                    problemas.append(
+                        f"{slug} paso {p.ref} ({p.nombre}): aprobacion vencida, {rel} cambio "
+                        f"despues de la firma. Que la persona lo revise y vuelva a firmar: "
+                        f"--mode approve-step --increment {slug} --step {p.ref}")
+                elif firma == "desaparecido":
+                    print(f"  FAIL  {slug} · paso {p.ref} ({p.nombre}) APPROVED, pero {rel} "
+                          f"ya no existe")
+                    problemas.append(f"{slug} paso {p.ref} ({p.nombre}): el artefacto "
+                                     f"aprobado {rel} ya no existe")
+                else:
+                    nota = "  (firma sin huella, anterior a 0.15.0)" if firma == "sin_huella" else ""
+                    print(f"  PASS  {slug} · paso {p.ref} ({p.nombre}) APPROVED{nota}")
             elif estado in {"PENDING", "IN_PROGRESS", "NEEDS_REVISION"}:
                 print(f"  ....  {slug} · paso {p.ref} ({p.nombre}) aun en curso ({estado})")
             else:
                 print(f"  FAIL  {slug} · paso {p.ref} ({p.nombre}) esta {estado} sin APPROVED")
                 problemas.append(f"{slug} paso {p.ref} ({p.nombre}): {estado} sin aprobacion")
 
-    print(f"\n{revisados} compuerta(s) revisada(s), {len(problemas)} sin aprobar")
+    print(f"\n{revisados} compuerta(s) revisada(s), {len(problemas)} sin aprobacion vigente")
     if problemas:
-        print("\nUn paso con compuerta no puede integrarse sin aprobacion explicita:")
+        print("\nUn paso con compuerta no puede integrarse sin una aprobacion vigente:")
         for p in problemas:
             print(f"  - {p}")
         sys.exit(1)
@@ -1276,15 +1606,18 @@ def cmd_check_preset(preset_id: Optional[str]) -> None:
     print("[OK] todos los presets son validos y sus rutas existen")
 
 
-def cmd_advance(project_dir: Path) -> None:
+def cmd_advance(project_dir: Path, slug: Optional[str] = None) -> None:
     state, state_file = load_state(project_dir)
     if not state:
         fallar("no existe initiative/state.yml")
     preset = preset_de(state)
 
-    inc, idx = get_increment(state, None)
+    # Hasta 0.14.0 `--increment` se aceptaba y no se leia: el avance caia siempre sobre
+    # el incremento enfocado, sin aviso.
+    inc, idx = get_increment(state, slug)
     if not inc:
-        fallar("no hay incremento activo")
+        fallar("incremento no encontrado: %s" % slug if slug else "no hay incremento activo")
+    slug_real = inc.get("slug")
     avisar_si_la_rama_no_cuadra(project_dir, inc)
 
     tipo = inc.get("type", "build")
@@ -1295,18 +1628,28 @@ def cmd_advance(project_dir: Path) -> None:
 
     if paso.human_gate and estado == "COMPLETED":
         fallar(
-            f"el paso {paso.ref} ({paso.nombre}) requiere aprobacion del usuario.\n"
-            f"       Ejecuta: verify_frame.py --mode approve-step"
+            f"el paso {paso.ref} ({paso.nombre}) de {slug_real} requiere aprobacion del "
+            f"usuario.\n       Ejecuta: verify_frame.py --mode approve-step --increment "
+            f"{slug_real}"
         )
     if estado not in {"COMPLETED", "APPROVED"}:
         fallar(
-            f"no se puede avanzar: el paso {paso.ref} ({paso.nombre}) esta {estado}. "
-            f"Debe estar COMPLETED{' y APPROVED' if paso.human_gate else ''}."
+            f"no se puede avanzar: el paso {paso.ref} ({paso.nombre}) de {slug_real} esta "
+            f"{estado}. Debe estar COMPLETED{' y APPROVED' if paso.human_gate else ''}."
         )
+    if paso.human_gate and estado == "APPROVED":
+        firma, rel = estado_de_firma(project_dir, preset, inc, paso)
+        if firma in {"vencida", "desaparecido"}:
+            fallar(
+                f"no se puede avanzar: la firma del paso {paso.ref} de {slug_real} esta "
+                f"{firma} ({rel} {'cambio despues de la firma' if firma == 'vencida' else 'ya no existe'}).\n"
+                f"       La persona tiene que revisarlo y volver a firmar: "
+                f"--mode approve-step --increment {slug_real} --step {paso.ref}"
+            )
 
     i = ciclo.refs.index(paso.ref)
     if i + 1 >= len(ciclo.refs):
-        print(f"[FIN] {inc.get('slug')} llego al ultimo paso del ciclo `{tipo}`.")
+        print(f"[FIN] {slug_real} llego al ultimo paso del ciclo `{tipo}`.")
         print("      Cierra el incremento con --mode set-status --status COMPLETED")
         return
 
@@ -1315,10 +1658,10 @@ def cmd_advance(project_dir: Path) -> None:
     pasos[siguiente.clave] = "IN_PROGRESS"
     state["increments"][idx] = inc
     record_history(state, "ADVANCE_STEP", {
-        "increment": inc.get("slug"), "from_step": paso.ref, "to_step": siguiente.ref,
+        "increment": slug_real, "from_step": paso.ref, "to_step": siguiente.ref,
     })
     save_state(state, state_file)
-    print(f"[ADVANCE] paso {siguiente.ref}: {siguiente.nombre}")
+    print(f"[ADVANCE] {slug_real} · paso {siguiente.ref}: {siguiente.nombre}")
     if siguiente.human_gate:
         print("          este paso requiere aprobacion humana al terminarlo")
     if siguiente.plantilla:
@@ -1399,46 +1742,149 @@ def cmd_complete_step(
         "forced": bool(problemas and forzar), "reason": motivo,
     })
     save_state(state, state_file)
-    print("[COMPLETED] paso %s: %s" % (paso.ref, paso.nombre))
+    print("[COMPLETED] %s · paso %s: %s" % (inc.get("slug"), paso.ref, paso.nombre))
     if paso.human_gate:
-        print("            lleva compuerta: pide aprobacion al usuario y registrala con")
-        print("            --mode approve-step --by \"<usuario>\"")
+        print("            lleva compuerta: presenta el artefacto al usuario; la firma es suya:")
+        print("            --mode approve-step --increment %s --by \"<usuario>\""
+              % inc.get("slug"))
     else:
         print("            --mode advance para pasar al siguiente")
 
 
-def cmd_approve_step(project_dir: Path, actor: Optional[str]) -> None:
+def cmd_approve_step(
+    project_dir: Path, actor: Optional[str],
+    slug: Optional[str] = None, ref: Optional[str] = None,
+) -> None:
+    """Registra la firma de una persona sobre el artefacto de un paso con compuerta.
+
+    La firma guarda la huella del artefacto (si cambia despues, la firma se vence) y el
+    canal por el que se dio: `interactive` si alguien la confirmo escribiendo en una
+    terminal, `declared` si no. Un proyecto puede exigir la primera con
+    `--mode gate-policy --require-interactive on`.
+    """
     state, state_file = load_state(project_dir)
     if not state:
         fallar("no existe initiative/state.yml")
     preset = preset_de(state)
 
-    inc, idx = get_increment(state, None)
+    # Hasta 0.14.0 `--increment` se aceptaba y no se leia: la firma caia siempre sobre
+    # el incremento enfocado, y el mensaje no decia cual.
+    inc, idx = get_increment(state, slug)
     if not inc:
-        fallar("no hay incremento activo")
+        fallar("incremento no encontrado: %s" % slug if slug else "no hay incremento activo")
+    slug_real = inc.get("slug")
+    tipo = inc.get("type", "build")
 
-    paso = paso_actual(preset, inc)
+    if ref:
+        paso = preset.ciclo(tipo).por_ref(str(ref))
+        if paso is None:
+            fallar(f"paso `{ref}` invalido para el ciclo `{tipo}` de {slug_real}")
+    else:
+        paso = paso_actual(preset, inc)
     if not paso.human_gate:
-        fallar(f"el paso {paso.ref} ({paso.nombre}) no tiene compuerta humana")
+        fallar(f"el paso {paso.ref} ({paso.nombre}) de {slug_real} no tiene compuerta humana")
 
     pasos = inc.setdefault("steps", {})
-    if pasos.get(paso.clave) != "COMPLETED":
+    estado = pasos.get(paso.clave, "PENDING")
+    refirma = False
+    if estado == "APPROVED":
+        # Volver a firmar solo tiene sentido si la firma de hoy no certifica lo que hay.
+        firma, rel = estado_de_firma(project_dir, preset, inc, paso)
+        if firma == "desaparecido":
+            fallar(f"el artefacto firmado {rel} ya no existe: no hay nada que firmar. "
+                   f"Restauralo, o rehaz el paso con --mode rewind")
+        if firma not in {"vencida", "sin_huella"}:
+            fallar(f"el paso {paso.ref} de {slug_real} ya esta APPROVED y su firma sigue "
+                   f"vigente: no hay nada que volver a firmar")
+        refirma = True
+    elif estado != "COMPLETED":
         fallar(
-            f"el paso debe estar COMPLETED antes de aprobarse "
-            f"(ahora: {pasos.get(paso.clave, 'PENDING')})"
+            f"el paso {paso.ref} de {slug_real} debe estar COMPLETED antes de aprobarse "
+            f"(ahora: {estado})"
         )
+
+    if _hay_terminal():
+        try:
+            respuesta = input(
+                f"Vas a firmar {slug_real} · paso {paso.ref} ({paso.nombre}).\n"
+                f"Para confirmar, escribe el slug del incremento: ").strip()
+        except EOFError:
+            respuesta = ""
+        if respuesta != slug_real:
+            fallar("firma cancelada: lo escrito no coincide con el slug del incremento")
+        via = "interactive"
+    else:
+        if exige_firma_interactiva(state):
+            fallar(
+                "este proyecto exige firmar las compuertas desde una terminal "
+                "(initiative.gates.require_interactive), y aqui no la hay.\n"
+                "       Si eres la persona que aprueba, ejecuta este mismo comando tu, en tu "
+                "terminal.\n"
+                "       Si eres un agente: presenta el artefacto y pidele a la persona que "
+                "lo firme. No lo firmes tu."
+            )
+        via = "declared"
+
+    rel = preset.ruta_artefacto(slug_real, paso)
+    sello = huella(project_dir / rel) if rel else None
+    anterior = (inc.get("approvals") or {}).get(paso.clave) or {}
 
     pasos[paso.clave] = "APPROVED"
     inc.setdefault("approvals", {})[paso.clave] = {
         "approved_at": ahora(),
         "approved_by": actor or os.environ.get("USER") or os.environ.get("USERNAME") or "desconocido",
+        "approved_via": via,
+        "artifact": rel,
+        "artifact_sha256": sello,
     }
     state["increments"][idx] = inc
-    record_history(state, "APPROVE_STEP", {
-        "increment": inc.get("slug"), "step": paso.ref, "by": inc["approvals"][paso.clave]["approved_by"],
-    })
+    detalle = {
+        "increment": slug_real, "step": paso.ref,
+        "by": inc["approvals"][paso.clave]["approved_by"], "via": via,
+        "artifact_sha256": sello,
+    }
+    if refirma:
+        # La firma anterior no se pierde: queda aqui, junto a la que la reemplaza.
+        detalle["resign"] = True
+        detalle["previous_sha256"] = anterior.get("artifact_sha256")
+    record_history(state, "APPROVE_STEP", detalle)
     save_state(state, state_file)
-    print(f"[APPROVED] paso {paso.ref}: {paso.nombre}")
+
+    print(f"[APPROVED] {slug_real} · paso {paso.ref}: {paso.nombre}"
+          + ("  (nueva firma)" if refirma else ""))
+    if sello:
+        print(f"           huella {sello[:23]}...: si {rel} cambia, esta firma se vence")
+    if via == "declared":
+        print("           firma declarada: no se dio desde una terminal interactiva, y asi")
+        print("           queda registrada. Para exigirlo: --mode gate-policy --require-interactive on")
+
+
+def cmd_gate_policy(project_dir: Path, valor: Optional[str]) -> None:
+    """Cuanto exige este proyecto para firmar una compuerta (ADR-001, punto 5)."""
+    state, state_file = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    actual = exige_firma_interactiva(state)
+    if valor is None:
+        print("[GATES] firma interactiva exigida: %s" % ("si" if actual else "no"))
+        print("        Cambiar: --mode gate-policy --require-interactive on|off")
+        return
+    nuevo = valor == "on"
+    if nuevo == actual:
+        print("[GATES] sin cambios: la firma interactiva %s estaba exigida"
+              % ("ya" if actual else "no"))
+        return
+    if actual and not nuevo and not _hay_terminal():
+        # Si un agente pudiera apagarla, la podria apagar y despues firmar en tu nombre.
+        fallar("dejar de exigir la firma interactiva solo se puede hacer desde una "
+               "terminal: si un programa pudiera desactivarla, podria firmar despues en "
+               "nombre de otro")
+    ini = state.setdefault("initiative", {})
+    ini.setdefault("gates", {})["require_interactive"] = nuevo
+    record_history(state, "GATE_POLICY", {"require_interactive": nuevo,
+                                          "via": "interactive" if _hay_terminal() else "declared"})
+    save_state(state, state_file)
+    print("[GATES] firma interactiva exigida: %s" % ("si" if nuevo else "no"))
 
 
 def _ciclo_de_dependencias(
@@ -2124,6 +2570,125 @@ def cmd_explain_input(project_dir: Path, input_id: str) -> None:
     print()
 
 
+def cmd_upgrade_notes(project_dir: Path, como_json: bool) -> None:
+    """Que cambio entre la version de este proyecto y la del motor, y que hacer."""
+    state, _ = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    info = info_actualizacion(state)
+    mas_nuevo = _proyecto_mas_nuevo(state)
+
+    if como_json:
+        print(json.dumps({
+            "ief_version": version_proyecto(state),
+            "engine_version": version_motor(),
+            "project_is_newer": bool(mas_nuevo),
+            "upgrade": info,
+        }, indent=2, ensure_ascii=False))
+        return
+
+    if mas_nuevo:
+        print("[UPGRADE] %s. Actualiza el bundle: este motor no sabe que cambio despues."
+              % mas_nuevo)
+        return
+    if not info:
+        print("[UPGRADE] al dia: el proyecto y el motor estan en IEF %s." % version_motor())
+        return
+
+    print()
+    print("  IEF %s -> %s: %d cambio(s) que afectan a este proyecto"
+          % (info["from"], info["to"], len(info["changes"])))
+    print("  " + "-" * 68)
+    for c in info["changes"]:
+        print()
+        print("  [%s] %s · %s  (%s)" % (c.get("version"), c.get("tipo"),
+                                      ", ".join(c.get("afecta") or []), c.get("id")))
+        print("    que cambia: %s" % " ".join(str(c.get("que_cambia", "")).split()))
+        print("    que hacer : %s" % " ".join(str(c.get("que_hacer", "")).split()))
+        if c.get("migracion"):
+            print("    lo aplica : --mode migrate (%s)" % c["migracion"])
+    print()
+    print("  Siguiente: --mode migrate para ver que cambiaria (no escribe nada), y")
+    print("             --mode migrate --yes para aplicarlo. Lo aplica la persona, no el agente.")
+    print()
+
+
+def cmd_migrate(project_dir: Path, aplicar: bool) -> None:
+    """Lleva el proyecto a la version del motor. Por defecto solo muestra que haria.
+
+    Con --yes, respalda antes de escribir (`state.yml.bak-<version>` y, si se toca,
+    `AGENTS.md.bak-<version>`), aplica las migraciones pendientes, actualiza la seccion
+    del motor en AGENTS.md sin tocar lo de fuera, y registra MIGRATE en el historial.
+    Es idempotente: si no hay nada que hacer, no escribe.
+    """
+    state, state_file = load_state(project_dir)
+    if not state:
+        fallar("no existe initiative/state.yml")
+    preset = preset_de(state)
+    mas_nuevo = _proyecto_mas_nuevo(state)
+    if mas_nuevo:
+        fallar("%s: no se migra hacia atras. Actualiza el bundle." % mas_nuevo)
+
+    desde, hasta = version_proyecto(state), version_motor()
+    nuevo = copy.deepcopy(state)
+    acciones: List[str] = []
+    for _, _, mid, fn in migraciones_pendientes(desde, hasta):
+        hechas = fn(nuevo)
+        acciones += ["%s: %s" % (mid, h) for h in hechas] or [
+            "%s: sin cambios en el estado (la version solo agrega campos)" % mid]
+    if nuevo.get("ief_version") != hasta:
+        acciones.append("state.yml: ief_version %s -> %s" % (
+            state.get("ief_version") or "(sin registrar; se asume %s)" % desde, hasta))
+        nuevo["ief_version"] = hasta
+
+    ruta_ag = ruta_agents(project_dir)
+    actual_ag = leer_texto_exacto(ruta_ag)
+    texto_ag, accion_ag = agents_propuesto(actual_ag, bloque_agents(nuevo, preset))
+    if accion_ag != "igual":
+        acciones.append("AGENTS.md: " + {
+            "crear": "se crea con la seccion del IEF",
+            "reemplazar": ("se actualiza la seccion del IEF (v%s -> v%s); lo escrito fuera "
+                           "de los marcadores no se toca" % (version_de_bloque(actual_ag), hasta)),
+            "insertar": ("se inserta la seccion del IEF al principio; no se borra nada. "
+                         "Revisa despues si mas abajo quedan instrucciones del IEF "
+                         "duplicadas o viejas, y borralas tu"),
+        }[accion_ag])
+
+    if not acciones:
+        print("[MIGRATE] al dia: nada que migrar (IEF %s)." % hasta)
+        return
+
+    print()
+    print("  [MIGRATE] IEF %s -> %s" % (desde, hasta))
+    for a in acciones:
+        print("    - %s" % a)
+    print()
+    if not aplicar:
+        print("  Simulacion: no se escribio nada. Para aplicarlo: --mode migrate --yes")
+        print("  (lo decide la persona: el agente muestra esto y espera su respuesta)")
+        print()
+        return
+
+    def _respaldo(ruta: Path) -> Path:
+        destino = ruta.with_name("%s.bak-%s" % (ruta.name, desde))
+        n = 1
+        while destino.exists():
+            n += 1
+            destino = ruta.with_name("%s.bak-%s-%d" % (ruta.name, desde, n))
+        shutil.copy2(ruta, destino)
+        return destino
+
+    respaldos = [_respaldo(state_file)]
+    if accion_ag != "igual":
+        if actual_ag is not None:
+            respaldos.append(_respaldo(ruta_ag))
+        escribir_texto_exacto(ruta_ag, texto_ag)
+    record_history(nuevo, "MIGRATE", {"from": desde, "to": hasta, "actions": acciones})
+    save_state(nuevo, state_file)
+    print("  Aplicado. Respaldo(s): %s" % ", ".join(r.name for r in respaldos))
+    print()
+
+
 def cmd_doctor(project_dir: Path) -> None:
     """Diagnostico: en que estado real esta esto.
 
@@ -2147,6 +2712,34 @@ def cmd_doctor(project_dir: Path) -> None:
         avisos.append(
             "state.yml declara schema_version %s y este motor escribe %s; "
             "el archivo viene de una version anterior del IEF" % (esquema, SCHEMA_ACTUAL))
+
+    # 0a. La version del proyecto frente a la del motor (ADR-002).
+    mas_nuevo = _proyecto_mas_nuevo(state)
+    if mas_nuevo:
+        problemas.append("%s: actualiza el bundle antes de escribir en este proyecto"
+                         % mas_nuevo)
+    info = info_actualizacion(state)
+    if info:
+        avisos.append(
+            "el proyecto esta al dia con IEF %s y el motor es %s: %d cambio(s) lo "
+            "afectan. Revisalos con --mode upgrade-notes y aplicalos con --mode migrate"
+            % (info["from"], info["to"], len(info["changes"])))
+
+    # 0a'. La seccion del IEF en AGENTS.md. Es lo que lee el agente al llegar: si esta
+    #      vieja, sigue enseñando comandos que ya no son asi.
+    texto_agents = leer_texto_exacto(ruta_agents(project_dir))
+    if texto_agents is None:
+        avisos.append("no hay AGENTS.md: los agentes no reciben las reglas del IEF. "
+                      "--mode migrate lo crea")
+    else:
+        v_bloque = version_de_bloque(texto_agents)
+        if v_bloque is None:
+            avisos.append("AGENTS.md no tiene la seccion del motor (<!-- IEF:INICIO -->): sus "
+                          "instrucciones del IEF no se actualizan solas. --mode migrate la "
+                          "inserta sin borrar nada")
+        elif v_bloque != version_motor():
+            avisos.append("la seccion del IEF en AGENTS.md es de la version %s y el motor es "
+                          "%s. --mode migrate la actualiza" % (v_bloque, version_motor()))
 
     foco = get_focus(state)
     if foco and not any(i.get("slug") == foco or i.get("id") == foco for i in incs):
@@ -2291,6 +2884,45 @@ def cmd_doctor(project_dir: Path) -> None:
                 problemas.append("%s paso %s (%s): COMPLETED sin aprobar"
                                  % (inc.get("slug"), p.ref, p.nombre))
 
+    # 6b. Firmas (ADR-001). Una firma vencida es un problema: la compuerta dice APPROVED
+    #     sobre algo que ya no existe tal como se aprobo. Las declaradas y las antiguas
+    #     se resumen en una linea cada una: son informacion, no fallos.
+    declaradas, sin_huella = 0, 0
+    for inc in incs:
+        tipo = inc.get("type", "build")
+        if tipo not in preset.ciclos:
+            continue
+        for p in preset.pasos(tipo):
+            if not p.human_gate or (inc.get("steps") or {}).get(p.clave) != "APPROVED":
+                continue
+            firma, rel = estado_de_firma(project_dir, preset, inc, p)
+            if firma == "vencida":
+                problemas.append(
+                    "%s paso %s (%s): aprobacion vencida, %s cambio despues de la firma. "
+                    "La persona tiene que revisarlo y volver a firmar "
+                    "(--mode approve-step --increment %s --step %s)"
+                    % (inc.get("slug"), p.ref, p.nombre, rel, inc.get("slug"), p.ref))
+            elif firma == "desaparecido":
+                problemas.append("%s paso %s (%s): el artefacto aprobado %s ya no existe"
+                                 % (inc.get("slug"), p.ref, p.nombre, rel))
+            if inc.get("status") in CERRADOS:
+                continue
+            if firma == "sin_huella":
+                sin_huella += 1
+            elif ((inc.get("approvals") or {}).get(p.clave) or {}).get("approved_via") == "declared":
+                declaradas += 1
+    if sin_huella:
+        avisos.append(
+            "%d firma(s) sin huella en incrementos abiertos (anteriores a 0.15.0): no se "
+            "puede comprobar que lo aprobado siga igual. Para certificarlas, la persona "
+            "puede volver a firmarlas con --mode approve-step --increment <slug> --step <ref>"
+            % sin_huella)
+    if declaradas and not exige_firma_interactiva(state):
+        avisos.append(
+            "%d firma(s) declaradas en incrementos abiertos: no se dieron desde una terminal "
+            "interactiva, asi que cualquiera con acceso al motor pudo registrarlas. Para "
+            "exigirlo: --mode gate-policy --require-interactive on" % declaradas)
+
     # 7. Sin foco habiendo trabajo abierto.
     if not get_focus(state) and any(i.get("status") in ABIERTOS for i in incs):
         avisos.append("hay incrementos abiertos y ningun foco: --mode focus --increment <slug>")
@@ -2317,6 +2949,68 @@ def cmd_doctor(project_dir: Path) -> None:
     print()
     if problemas:
         sys.exit(1)
+
+
+def validar_cambios() -> List[str]:
+    """Errores de core/cambios.yml. Lista vacia si esta bien.
+
+    Hace cumplir la politica de ADR-002: toda version publicada tiene su bloque, cada
+    cambio dice que hacer, toda migracion citada existe, y nada se retira sin haberse
+    anunciado antes como obsoleto en una version anterior.
+    """
+    ruta = BUNDLE_DIR / "core" / "cambios.yml"
+    if not ruta.exists():
+        return ["no existe"]
+    try:
+        bloques = cargar_cambios()
+    except yaml.YAMLError as exc:
+        return ["YAML ilegible: %s" % exc]
+
+    errores: List[str] = []
+    versiones = [str(b.get("version")) for b in bloques]
+    if version_motor() not in versiones:
+        errores.append("falta el bloque de la version actual %s" % version_motor())
+    ids_migracion = {m[2] for m in MIGRACIONES}
+    vistos: Dict[str, Tuple[str, str]] = {}          # id -> (version, tipo)
+    for bloque in sorted(bloques, key=lambda b: _v(b.get("version"))):
+        v = str(bloque.get("version"))
+        for c in bloque.get("cambios") or []:
+            cid = c.get("id") or "?"
+            for campo in ("id", "tipo", "afecta", "que_cambia", "que_hacer"):
+                if not c.get(campo):
+                    errores.append("%s sin `%s`" % (cid, campo))
+            if c.get("tipo") and c["tipo"] not in TIPOS_DE_CAMBIO:
+                errores.append("%s: tipo `%s` invalido" % (cid, c["tipo"]))
+            for a in c.get("afecta") or []:
+                if a not in AFECTA:
+                    errores.append("%s: afecta `%s` invalido" % (cid, a))
+            if c.get("migracion") and c["migracion"] not in ids_migracion:
+                errores.append("%s cita la migracion `%s`, que no existe"
+                               % (cid, c["migracion"]))
+            if c.get("tipo") == "retirado":
+                previo = vistos.get(str(c.get("anunciado_en")))
+                if not previo or previo[1] != "obsoleto" or _v(previo[0]) >= _v(v):
+                    errores.append(
+                        "%s retira algo sin haberlo anunciado como obsoleto en una version "
+                        "anterior (`anunciado_en` debe citar ese cambio)" % cid)
+            if cid in vistos:
+                errores.append("id repetido: %s" % cid)
+            vistos[cid] = (v, str(c.get("tipo")))
+    return errores
+
+
+def validar_changelog() -> List[str]:
+    """Cada version de core/cambios.yml tiene su seccion en CHANGELOG.md, y al reves."""
+    ruta = BUNDLE_DIR / "CHANGELOG.md"
+    if not ruta.exists():
+        return ["no existe"]
+    en_changelog = set(re.findall(r"^## \[(\d+\.\d+\.\d+)\]", ruta.read_text(encoding="utf-8"),
+                                  re.M))
+    en_cambios = {str(b.get("version")) for b in cargar_cambios()}
+    errores = ["falta la seccion de %s" % v for v in sorted(en_cambios - en_changelog, key=_v)]
+    errores += ["%s no tiene bloque en core/cambios.yml" % v
+                for v in sorted(en_changelog - en_cambios, key=_v)]
+    return errores
 
 
 def cmd_check_bundle() -> None:
@@ -2352,6 +3046,15 @@ def cmd_check_bundle() -> None:
             if c.get("file") and not (BUNDLE_DIR / "extension" / c["file"]).exists()
         ]
         resultados.append((f"comandos declarados existen{f' (faltan: {faltan})' if faltan else ''}", not faltan))
+
+    # El registro de cambios (ADR-002). Si miente, el agente que lo lee hace lo que no
+    # es; por eso se valida como codigo.
+    for nombre, errores in (("core/cambios.yml", validar_cambios()),
+                            ("CHANGELOG.md", validar_changelog())):
+        resultados.append((
+            "%s valido%s" % (nombre, " (%s)" % "; ".join(errores) if errores else ""),
+            not errores,
+        ))
 
     fallidos = 0
     for nombre, ok in resultados:
@@ -2401,7 +3104,7 @@ def main() -> None:
         "explain", "draft-report", "record-input",
         "verify-step", "check-gates", "check-preset", "check-bundle", "check-steps",
         "advance", "complete-step", "approve-step", "set-status", "rewind",
-        "merge-increment",
+        "merge-increment", "upgrade-notes", "migrate", "gate-policy",
     ])
     p.add_argument("--project-dir", default=os.getcwd())
     p.add_argument("--preset", help="id del preset (modo init / check-preset)")
@@ -2428,7 +3131,11 @@ def main() -> None:
                    help="al reactivar, mover tambien el foco a este incremento")
     p.add_argument("--to-step")
     p.add_argument("--by", help="quien aprueba (modo approve-step)")
-    p.add_argument("--json", action="store_true", help="salida JSON (modo status)")
+    p.add_argument("--require-interactive", choices=["on", "off"],
+                   help="exigir que las compuertas se firmen desde una terminal "
+                        "(modo gate-policy). Apagarlo exige estar en una terminal")
+    p.add_argument("--json", action="store_true",
+                   help="salida JSON (modos status y upgrade-notes)")
     p.add_argument("--dry-run", action="store_true", help="no escribe (modo merge-increment)")
     p.add_argument("--force", dest="force_step", action="store_true",
                    help="acepta un paso cuyo artefacto no valida (exige --reason)")
@@ -2448,10 +3155,13 @@ def main() -> None:
     p.add_argument("--output", help="donde quedo el resultado (modo log)")
     p.add_argument("--from", dest="origen", help="de donde salio (modo log)")
     p.add_argument("--yes", action="store_true",
-                   help="aplica la propuesta de --mode adopt en vez de solo mostrarla")
+                   help="aplica la propuesta de --mode adopt o --mode migrate en vez de "
+                        "solo mostrarla")
     args = p.parse_args()
 
     proj = Path(args.project_dir)
+    if args.mode not in {"init", "adopt", "check-preset", "check-bundle", "check-steps"}:
+        guardia_de_version(proj, args.mode, args.json)
 
     if args.mode == "init":
         cmd_init(proj, args.preset or "generic", args.layout or "flat",
@@ -2493,11 +3203,17 @@ def main() -> None:
     elif args.mode == "check-steps":
         cmd_check_steps()
     elif args.mode == "advance":
-        cmd_advance(proj)
+        cmd_advance(proj, args.increment)
     elif args.mode == "complete-step":
         cmd_complete_step(proj, args.increment, args.step, args.force_step, args.reason)
     elif args.mode == "approve-step":
-        cmd_approve_step(proj, args.by)
+        cmd_approve_step(proj, args.by, args.increment, args.step)
+    elif args.mode == "gate-policy":
+        cmd_gate_policy(proj, args.require_interactive)
+    elif args.mode == "upgrade-notes":
+        cmd_upgrade_notes(proj, args.json)
+    elif args.mode == "migrate":
+        cmd_migrate(proj, args.yes)
     elif args.mode == "set-status":
         if not args.status and not args.branch:
             fallar("--status es obligatorio (o --branch para solo corregir la rama)")

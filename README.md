@@ -48,7 +48,8 @@ académicos»: son un **rol** que casi todos usan.
 | **Reglas de abajo arriba** | spec-kit escribe la constitución al principio. El IEF además **descubre reglas trabajando** y las promueve al proyecto, con detección de conflictos. |
 | **El ciclo lo define el preset** | Qué pasos hay, cuáles llevan compuerta y dónde vive cada artefacto sale de `presets/<id>/preset.yml`. Un mixin inyecta un paso **sin tocar código**. |
 | **Criterios ejecutables** | `acceptance-tests.yml` se compila a pytest. Un criterio sin forma de verificarse **falla**. |
-| **Compuertas mecánicas** | `check-gates` sale con código 1 si un paso con compuerta quedó sin aprobar. Es condición de merge, no un recordatorio. |
+| **Compuertas mecánicas** | `check-gates` sale con código 1 si un paso con compuerta quedó sin aprobar, o si el artefacto cambió después de firmado: la firma guarda su huella. Es condición de merge, no un recordatorio. |
+| **Actualizar sin romper** | Cada proyecto recuerda con qué versión del IEF está al día; `upgrade-notes` dice qué cambió y `migrate` lo aplica con respaldo. |
 | **Varios frentes a la vez** | `ACTIVE` (varios) y `focus` (uno) son cosas distintas, con bloqueos tipados y diagnóstico. |
 
 ---
@@ -131,7 +132,7 @@ python $IEF/verify_frame.py --mode new-increment --type build --name "Ingesta de
 
 # 4. Trabajar el paso, verificarlo, aprobarlo si lleva compuerta, avanzar
 python $IEF/verify_frame.py --mode verify-step
-python $IEF/verify_frame.py --mode approve-step --by "yo"
+python $IEF/verify_frame.py --mode approve-step --by "yo"   # la firma la da una persona
 python $IEF/verify_frame.py --mode advance
 
 # 5. Compilar y ejecutar los criterios de aceptación
@@ -150,6 +151,10 @@ python $IEF/verify_frame.py --mode explain --rule RUL-003-001
 
 # El informe del incremento, con lo que el motor ya sabe
 python $IEF/verify_frame.py --mode draft-report --increment 001_ingesta_de_ventas
+
+# Tras actualizar el bundle: qué cambió, y ponerse al día (sin --yes solo simula)
+python $IEF/verify_frame.py --mode upgrade-notes
+python $IEF/verify_frame.py --mode migrate
 ```
 
 ### `explain`: el linaje de una regla

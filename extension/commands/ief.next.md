@@ -21,7 +21,7 @@ Lee el ciclo del preset y decide. Rechaza el avance si:
 En el segundo caso, pedir aprobacion explicita al usuario y solo entonces:
 
 ```bash
-python core/scripts/verify_frame.py --mode approve-step --by "<usuario>"
+python core/scripts/verify_frame.py --mode approve-step --increment <slug> --by "<usuario>"
 ```
 
 ## Regla

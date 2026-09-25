@@ -1,0 +1,268 @@
+ief_version: 0.14.0
+descripcion: 'Proyecto escrito por el motor 0.14.0 (commit af643f1), sin tocar a mano salvo AGENTS.md,
+  que en esa version lo armaba un agente. Lo materializa tests/test_actualizacion.py en un directorio
+  temporal. No se edita: si cambia, deja de representar lo que esa version escribia.'
+dirs:
+- 00_admin
+- 01_inicio
+- 02_referencias
+- 03_metodologia
+- 04_codigo
+- 04_codigo/notebooks
+- 04_codigo/src
+- 05_datos
+- 05_datos/processed
+- 05_datos/raw
+- 06_resultados
+- 06_resultados/figuras
+- 07_documento
+- 08_presentaciones
+- 09_avances
+- initiative
+- initiative/increments
+- initiative/increments/001_exploracion_inicial
+- initiative/increments/002_modelo_base
+- initiative/specs
+- scratch
+- tests
+files:
+  AGENTS.md: |
+    # AGENTS.md: Reglas y Contexto del Proyecto (IEF)
+
+    Instrucciones armadas por un agente al iniciar el proyecto, a partir de la plantilla del IEF.
+
+    * Pregúntale al motor: `python "$IEF/verify_frame.py" --mode status --json`.
+    * Firma de compuertas: `--mode approve-step --by "<usuario>"`. Ojo: cae siempre sobre el incremento enfocado.
+
+    ## Reglas propias del proyecto
+
+    * Los datos crudos nunca se modifican.
+    * Toda figura lleva la fecha de extracción en el pie.
+  initiative/increments/001_exploracion_inicial/objective.md: |
+    # Objetivo de Exploración: {{EXPLORATION_NAME}}
+
+    ## 1. Pregunta a Responder
+
+    <!-- ¿Qué queremos descubrir con esta exploración? Formular como pregunta concreta. -->
+
+    ## 2. Datos y Fuentes a Inspeccionar
+
+    <!-- Listar datasets, APIs, documentos o sistemas que se examinarán. -->
+
+    | Fuente | Tipo | Ubicación | Notas |
+    |--------|------|-----------|-------|
+    | | | | |
+
+    ## 3. Criterio de Éxito
+
+    <!-- ¿Cómo sabremos que la exploración fue exitosa? ¿Qué información mínima necesitamos obtener? -->
+
+    ## 4. Restricciones
+
+    <!-- Tiempo disponible, limitaciones de acceso, herramientas disponibles. -->
+
+    ## 5. Información Desconocida (PENDING)
+
+    <!-- Elementos que no podemos definir aún. Marcar con PENDING. -->
+  initiative/increments/002_modelo_base/charter.md: "# Initiative Charter: {{INITIATIVE_NAME}}\n\n**Initiative\
+    \ ID**: {{INITIATIVE_ID}}  \n**Status**: DRAFT  \n**Framework**: Iterative Evidence Framework (IEF\
+    \ - Increment F1.1)  \n\n---\n\n## 1. Propósito (Purpose)\n{{PURPOSE}}\n\n---\n\n## 2. Contexto (Context)\n\
+    {{CONTEXT}}\n\n---\n\n## 3. Resultado Esperado (Outcome)\n{{OUTCOME}}\n\n---\n\n## 4. Stakeholders\
+    \ Conocidos\n{{STAKEHOLDERS}}\n\n---\n\n## 5. Restricciones (Constraints)\n{{CONSTRAINTS}}\n\n---\n\
+    \n## 6. Información Desconocida (Pending Variables)\n{{PENDING_VARIABLES}}\n\n---\n\n## 7. Procedencia\
+    \ (Provenance)\n- **Author**: {{AUTHOR}}\n- **Created At**: {{CREATED_AT}}\n- **Skill**: speckit-ief-frame\n\
+    - **Template**: core/templates/charter-template.md\n- **Source Input**: {{SOURCE_INPUT}}\n\n---\n\n\
+    ## 8. Hallazgos de Exploraciones Previas\n\n<!-- Si este incremento build se basa en incrementos de\
+    \ exploración previos, \n     listar aquí los hallazgos relevantes con referencia al incremento de\
+    \ origen. -->\n\n| Incremento Origen | Hallazgo Clave | Implicación para este Incremento |\n|---|---|---|\n\
+    | (Completar si aplica) | | |\n"
+  initiative/specs/constitution.md: |
+    # Constitución — Proyecto largo
+
+    > Creada el 2026-09-25 · vive en `initiative/specs/constitution.md`
+
+    Los principios bajo los que trabaja este proyecto. Se escriben **una vez, al empezar**,
+    y cambian rara vez; cada cambio es un evento que se anota abajo.
+
+    **Qué va aquí y qué no.** Esta es una de dos capas, y confundirlas las vuelve inútiles:
+
+    | | Constitución *(este archivo)* | Reglas promovidas *(`rules.yml`)* |
+    |---|---|---|
+    | Describe | **Cómo se trabaja** | **Qué es cierto del dominio** |
+    | Ejemplo | «Ninguna cifra se cita sin evidencia ejecutable» | «Un episodio dura ≥ 5 minutos» |
+    | Nace | Aquí, antes del primer incremento | En el paso 4 de un incremento, empíricamente |
+    | Dirección | De arriba abajo | De abajo arriba |
+
+    Si algo lo descubriste trabajando, no es constitucional: es una regla, y su sitio es
+    `rules.yml`. Si es un compromiso que asumes antes de saber nada, va aquí.
+
+    ---
+
+    ## Principios
+
+    > Escribe entre tres y siete. Más de siete y nadie los recuerda; menos de tres y no
+    > restringen nada. Cada uno debe poder **violarse**: si es imposible incumplirlo, no
+    > es un principio, es una descripción.
+
+    ### P1 — {{Título corto}}
+
+    **Principio:** {{Qué se compromete a hacer o a no hacer el proyecto.}}
+
+    **Por qué:** {{Qué sale mal si no se respeta. Sin esto, el principio se erosiona en
+    cuanto aprieta el plazo.}}
+
+    **Cómo se nota que se incumplió:** {{La señal observable.}}
+
+    ### P2 — {{Título corto}}
+
+    **Principio:**
+
+    **Por qué:**
+
+    **Cómo se nota que se incumplió:**
+
+    ### P3 — {{Título corto}}
+
+    **Principio:**
+
+    **Por qué:**
+
+    **Cómo se nota que se incumplió:**
+
+    ---
+
+    ## Principios de partida sugeridos
+
+    Bórralos, quédatelos o reescríbelos. Están aquí porque son los que más caro se pagan
+    cuando faltan, no porque sean obligatorios.
+
+    - **Nada se afirma sin poder ejecutarlo.** Una cifra en un informe sin un comando que
+      la reproduzca es `PENDING`, no un resultado.
+    - **Los datos de origen son de solo lectura.** Nunca se editan en el sitio: todo
+      derivado se reconstruye desde el pipeline.
+    - **La especificación manda sobre el código.** Si la implementación revela que una
+      regla es inviable, se corrige la regla con `rewind`, no se parchea el código para
+      que quepa.
+    - **Lo que no se sabe se marca `PENDING`.** Nunca se rellena con una suposición
+      plausible.
+    - **Un rechazo es un resultado.** «El experimento no alcanzó el criterio» es
+      información y va al informe; no es motivo para bajar el criterio.
+
+    ---
+
+    ## Cómo se relaciona con los incrementos
+
+    1. Un incremento **no puede contradecir** un principio de aquí. Si necesita hacerlo,
+       primero se cambia la constitución, explícitamente y dejando constancia abajo.
+    2. El paso 1 (Charter) de cada incremento se lee **contra** estos principios.
+    3. Las reglas que un incremento promueve (`--mode merge-increment`) viven **debajo**
+       de la constitución, nunca por encima.
+
+    ---
+
+    ## Historial de enmiendas
+
+    Cambiar la constitución es un evento, no un ajuste. Anota siempre qué te hizo cambiar
+    de opinión: dentro de un año esa es la única parte que importará.
+
+    | Fecha | Qué cambió | Por qué | Quién |
+    |---|---|---|---|
+    | 2026-09-25 | Versión inicial | — | |
+  initiative/state.yml: |
+    schema_version: '4.0'
+    initiative:
+      id: PROYECTO-LARGO
+      name: Proyecto largo
+      preset: research
+      layout: numbered
+      created_at: '2026-09-25T00:40:31.843207+00:00'
+    focus: 002_modelo_base
+    max_active: 3
+    increments:
+    - id: '001'
+      slug: 001_exploracion_inicial
+      name: Exploracion inicial
+      type: exploration
+      status: ACTIVE
+      current_step: '2'
+      steps:
+        1_objective: COMPLETED
+        2_analysis: IN_PROGRESS
+        2b_data_contract: PENDING
+        3_findings: PENDING
+      branch: null
+      rules_base: sha256:sin-reglas
+      opened_at: '2026-09-25T00:40:32.265554+00:00'
+    - id: '002'
+      slug: 002_modelo_base
+      name: Modelo base
+      type: prototype
+      status: ACTIVE
+      current_step: '1'
+      steps:
+        1_charter: APPROVED
+        5_acceptance_tests: PENDING
+        6_implementation: PENDING
+        7_verification: PENDING
+      branch: null
+      rules_base: sha256:sin-reglas
+      opened_at: '2026-09-25T00:40:42.605750+00:00'
+      approvals:
+        1_charter:
+          approved_at: '2026-09-25T00:40:43.545680+00:00'
+          approved_by: Persona responsable
+    history:
+    - action: INIT
+      timestamp: '2026-09-25T00:40:31.843207+00:00'
+      preset: research
+      layout: numbered
+      cadena:
+      - generic
+      - research
+    - action: NEW_INCREMENT
+      timestamp: '2026-09-25T00:40:32.265554+00:00'
+      increment: 001_exploracion_inicial
+      type: exploration
+    - action: COMPLETE_STEP
+      timestamp: '2026-09-25T00:40:41.744980+00:00'
+      increment: 001_exploracion_inicial
+      step: '1'
+      forced: false
+      reason: null
+    - action: ADVANCE_STEP
+      timestamp: '2026-09-25T00:40:42.184488+00:00'
+      increment: 001_exploracion_inicial
+      from_step: '1'
+      to_step: '2'
+    - action: NEW_INCREMENT
+      timestamp: '2026-09-25T00:40:42.605750+00:00'
+      increment: 002_modelo_base
+      type: prototype
+    - action: COMPLETE_STEP
+      timestamp: '2026-09-25T00:40:43.107933+00:00'
+      increment: 002_modelo_base
+      step: '1'
+      forced: false
+      reason: null
+    - action: APPROVE_STEP
+      timestamp: '2026-09-25T00:40:43.545680+00:00'
+      increment: 002_modelo_base
+      step: '1'
+      by: Persona responsable
+    - action: LOG
+      timestamp: '2026-09-25T00:40:43.979470+00:00'
+      message: grafico preliminar
+      output: reports/figures/x.png
+    updated_at: '2026-09-25T00:40:43.979470+00:00'
+  initiative/worklog.md: |
+    # Bitacora de trabajo
+
+    Trabajo que no llego a incremento: graficos sueltos, documentos, arreglos
+    pequenos. Sin pasos ni compuertas — pero registrado, que era lo unico que
+    hacia falta.
+
+    Si algo de aqui empieza a crecer, a ser citado o a cambiar una regla del
+    proyecto, deja de pertenecer a esta lista: abrele un incremento.
+
+    - **2026-09-25** — grafico preliminar
+      - salida: `reports/figures/x.png`

@@ -101,16 +101,17 @@ y reglas sin promover. **Ejecútalo al volver a un proyecto tras un tiempo fuera
 
 2. **Compuertas humanas.** Los pasos con ✋ no avanzan sin aprobación explícita:
    ```bash
-   verify_frame.py --mode approve-step --by "<usuario>"
+   verify_frame.py --mode approve-step --increment <slug> --by "<usuario>"
    ```
    **Nunca escribas `APPROVED` editando `state.yml`.** Eso destruye la constancia que la
-   compuerta existe para dejar.
+   compuerta existe para dejar. La firma guarda la huella del artefacto: si cambia después,
+   se vence, y la vuelve a firmar la persona, no tú.
 
 3. **`state.yml` no se edita a mano.** Se toca con `verify_frame.py`, que escribe de
    forma atómica y deja historial.
 
-4. **Comprueba el foco antes de avanzar.** Si hay varios frentes abiertos, `advance` y
-   `approve-step` caen sobre el enfocado. Verifica con `--mode focus`.
+4. **Con varios frentes, nombra el incremento.** Sin `--increment`, los comandos caen
+   sobre el enfocado. Pásalo siempre que haya más de un frente abierto.
 
 5. **Los criterios se ejecutan.** Todo test del paso 5 lleva un bloque `verify`. Uno sin
    él **falla**, no se aprueba por omisión. Uno que hoy no se puede medir se marca

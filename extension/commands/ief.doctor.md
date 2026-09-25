@@ -23,6 +23,10 @@ diferencia, y ninguna parecía un problema en su momento.
 | Demasiados frentes activos | Más allá del límite blando suele ser dispersión |
 | `COMPLETED` sin promover | Sus reglas nunca subieron a la especificación viva |
 | Compuertas sin aprobar | Un paso terminado que nadie aprobó |
+| Firmas vencidas | El artefacto cambió después de firmado: la compuerta ya no certifica lo que hay |
+| Firmas declaradas o sin huella | Resumen: firmas dadas sin terminal, o anteriores a 0.15.0 |
+| Versión del proyecto | El proyecto está al día con una versión del IEF anterior a la del motor (`/speckit.ief.upgrade`) |
+| Sección del IEF en `AGENTS.md` | Falta, o es de otra versión: el agente sigue instrucciones viejas |
 | Proyecto detenido | Todos los frentes pausados o bloqueados a la vez |
 | Sin foco | Hay trabajo abierto y ningún incremento enfocado |
 

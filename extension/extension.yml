@@ -2,7 +2,7 @@ schema_version: "1.0"
 extension:
   id: ief
   name: Iterative Evidence Framework Extension
-  version: "0.14.0"
+  version: "0.15.0"
   description: Ciclos definidos por el preset, compuertas humanas verificables y criterios
     de aceptacion ejecutables
   category: process
@@ -94,6 +94,16 @@ provides:
     - ief.doctor
     description: Diagnostica bloqueos, conflictos y olvidos del proyecto
     file: commands/ief.doctor.md
+  - name: speckit.ief.upgrade
+    aliases:
+    - ief.upgrade
+    description: Muestra qué cambió en el IEF desde la versión del proyecto y lo migra
+    file: commands/ief.upgrade.md
+  - name: speckit.ief.gates
+    aliases:
+    - ief.gates
+    description: Consulta o cambia cuánto exige el proyecto para firmar una compuerta
+    file: commands/ief.gates.md
   - name: speckit.ief.adopt
     aliases:
     - ief.adopt

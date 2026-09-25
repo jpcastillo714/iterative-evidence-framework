@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesta
+Aceptada (2026-09-24)
 
 ## Contexto
 
@@ -182,3 +182,24 @@ Además de los cuatro chequeos del bundle y de `verificar_skills.py`.
   actualizan en el mismo cambio.
 - **Para quien firma:** editar un artefacto aprobado ya no es silencioso. Esto es
   intencional: es la única forma de que la firma signifique «aprobé *esto*».
+
+## Notas de implementación
+
+Implementado en 0.15.0. Precisiones respecto del texto aceptado:
+
+- **La huella normaliza los fines de línea** (CRLF → LF) antes de calcular el SHA-256. Sin
+  eso, clonar el proyecto en otro sistema operativo, donde git convierte los fines de
+  línea, vencería todas las firmas sin que nadie hubiera cambiado una palabra.
+- **También se puede volver a firmar una firma sin huella**, no solo una vencida (punto
+  3). Es la forma de que una persona certifique una firma anterior a 0.15.0 si quiere
+  hacerlo. Una firma vigente no se vuelve a firmar.
+- **Cómo declara un proyecto su política** (punto 5): con `--mode gate-policy
+  --require-interactive on|off`, para no pedirle a nadie que edite `state.yml` a mano.
+  Apagar la exigencia requiere estar en una terminal: si un agente pudiera apagarla,
+  podría apagarla y firmar después.
+- **`advance` tampoco pasa sobre una firma vencida.** El punto 2 nombraba `check-gates` y
+  `doctor`; dejar que `advance` avance sobre una compuerta cuyo objeto cambió contradecía
+  el punto 2.
+- **`doctor` resume** las firmas declaradas y las sin huella en una línea cada una, y
+  solo cuenta las de incrementos abiertos. Las vencidas se listan una por una, como
+  problemas.

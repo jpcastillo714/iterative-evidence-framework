@@ -33,9 +33,11 @@ Consultala siempre con `python core/scripts/verify_frame.py --mode status --json
 
    **Compuerta humana.** Pedir aprobacion explicita al usuario y, solo si aprueba:
    ```bash
-   python core/scripts/verify_frame.py --mode approve-step --by "<usuario>"
+   python core/scripts/verify_frame.py --mode approve-step --increment <slug> --by "<usuario>"
    ```
    El motor NO deja avanzar sin esto, y la CI lo comprueba con `--mode check-gates`.
+   Firmar los criterios los congela: si alguien los edita después, la firma se vence
+   y hay que volver a firmar.
 
 5. Avanzar:
    ```bash
