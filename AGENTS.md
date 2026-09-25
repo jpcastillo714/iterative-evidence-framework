@@ -107,6 +107,20 @@ Señales de que se están volviendo a mezclar:
    versiones viejas, sin informes de fases pasadas, sin borradores. Para eso está el
    historial de git.
 
+7. **Todo cambio de comportamiento tiene un registro de decisión aceptado.** Un modo
+   nuevo, un campo nuevo en `state.yml`, una compuerta que cambia o una ruta que se mueve
+   se proponen primero en [`docs/decisiones/`](docs/decisiones/README.md) (ADR), y se
+   implementan solo cuando el ADR está `Aceptada`. Aceptarlo es decisión de quien
+   mantiene el repositorio, no del agente que lo escribió. Las correcciones de fallos
+   que no cambian el comportamiento documentado no lo necesitan.
+
+8. **Lo que se afirma sobre el diseño se respalda con una referencia verificada.** Las
+   citas van como `[@clave]` y apuntan a [`docs/REFERENCIAS.md`](docs/REFERENCIAS.md).
+   Solo entra un trabajo que se abrió en su fuente primaria. Se declara si es preprint y
+   se anota dónde está cada hallazgo que se usa. `tests/test_referencias.py` lo hace
+   cumplir. Lo que no tiene respaldo empírico se declara como decisión de ingeniería, no
+   se disfraza de evidencia.
+
 ---
 
 ## Qué es este framework

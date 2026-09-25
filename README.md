@@ -13,7 +13,9 @@
 > [!TIP]
 > **¿Quieres entenderlo a fondo?** [`docs/GUIA_DE_ESTUDIO.md`](docs/GUIA_DE_ESTUDIO.md)
 > explica cada pieza con salidas reales del motor, cuatro casos de uso completos y los
-> malentendidos más frecuentes.
+> malentendidos más frecuentes. Las decisiones de diseño, con la evidencia que las
+> respalda y sus límites, están en [`docs/decisiones/`](docs/decisiones/README.md), y la
+> bibliografía verificada, en [`docs/REFERENCIAS.md`](docs/REFERENCIAS.md).
 
 > [!IMPORTANT]
 > **Este directorio es el framework, no un proyecto.** Nunca se crea un `initiative/`

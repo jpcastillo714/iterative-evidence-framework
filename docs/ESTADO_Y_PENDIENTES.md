@@ -17,6 +17,8 @@ En este orden, y no son opcionales:
 | [`AGENTS.md`](../AGENTS.md) | Las reglas de este directorio. Lo primero. |
 | [`docs/GUIA_DE_ESTUDIO.md`](GUIA_DE_ESTUDIO.md) | Cómo funciona el framework, con ejemplos ejecutados. 30 secciones; si tienes prisa, la 3 (garantías), la 10 (vida de un paso) y la 26 (malentendidos). |
 | Skill `ief-authoring` | Dónde va cada tipo de cambio y qué se verifica después. |
+| [`docs/decisiones/`](decisiones/README.md) | Las decisiones de diseño (ADR), con su evidencia y sus límites. Todo cambio de comportamiento pasa por aquí antes de implementarse. |
+| [`docs/REFERENCIAS.md`](REFERENCIAS.md) | La bibliografía que respalda esas decisiones, verificada en la fuente primaria. |
 | Este documento | Qué está a medias, qué está roto y qué se discutió sin implementar. |
 
 **Este directorio no es un proyecto.** Nunca crees un `initiative/` aquí ni ejecutes
@@ -52,26 +54,18 @@ Estado medido el 2026-09-24 con los cuatro chequeos del bundle:
 
 ---
 
-## 3. El árbol de trabajo no está limpio
+## 3. Decisiones propuestas, pendientes de aprobación
 
-**Lo primero que tienes que resolver.** Hay trabajo terminado y sin commitear en `main`:
+El árbol quedó limpio el 2026-09-24 (commit `d3b19d4`). Lo que sigue son **propuestas**:
+no se implementa nada hasta que quien mantiene el repositorio las acepte.
 
-| Archivo | Qué cambia |
-|---|---|
-| `core/scripts/verify_frame.py` | Una sola definición de «artefacto promovible» (`artefactos_promovibles`) compartida por `merge-increment` y `doctor`. Antes `doctor` pedía promover un `task` terminado y el merge respondía que no había nada que promover: dos respuestas contradictorias del mismo motor. |
-| `tests/test_concurrencia.py` | El test de regresión de eso. |
-| `presets/product-modeling/` + `bundle.yml` | Preset nuevo: composición pura de `product` + `modeling`, para que `--preset` pueda elegirla con un solo id. No redefine pasos. |
-| `core/templates/agents-template.md` | Reescritura: el `AGENTS.md` que se genera en cada proyecto ahora enseña a preguntarle al motor (`status --json`) en vez de fijar un ciclo, y trae la tabla de modos para no editar `state.yml` a mano. |
-| `core/steps/01_charter`, `02_empirical_inspection`, `07_verification` | Rutas corregidas: los artefactos viven en `initiative/increments/<SLUG>/`, no en `initiative/`. Las instrucciones decían la ruta vieja. |
-| `AGENTS.md`, `SKILL.md`, `README.md`, `extension/commands/ief.init.md` | Documentación desactualizada, corregida el 2026-09-24: el ejemplo de `init` usaba el preset `data-science`, que ya no existe; `ief.init.md` ofrecía `engineering` y `academic` (borrados desde hace tres versiones) y mandaba a añadir carpetas en `presets/<id>/directory-convention.yml`, archivo que tampoco existe; el `README` y el `SKILL` hablaban de «los tres ciclos» habiendo cuatro. |
-| `tests/test_presets.py`, `tests/test_higiene.py` | Los tests que recorren el árbol ignoran `.claude/worktrees/`. Un worktree de git es otro checkout del mismo repositorio dentro de él, y el test de coherencia de claves de paso fallaba señalando archivos de otra rama. Fallaba solo en local, nunca en CI, que es la peor variante. |
-| `docs/ESTADO_Y_PENDIENTES.md` | Este documento. |
+| ADR | Qué propone | Por qué importa |
+|---|---|---|
+| [ADR-002](decisiones/ADR-002-compatibilidad-entre-versiones.md) | Política de versiones con período de obsolescencia, `CHANGELOG.md` y `core/cambios.yml`, `ief_version` en `state.yml`, `--mode upgrade-notes` y `--mode migrate`, sección con marcadores en el `AGENTS.md` de cada proyecto, y fixtures por versión | Hoy un proyecto largo no tiene cómo saber qué cambió al actualizar el bundle, y su `AGENTS.md` (que arma el agente, no el motor) queda enseñando comandos viejos. Va primero: los cambios de ADR-001 deben llegar a los proyectos por este canal. |
+| [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md) | La firma guarda la huella SHA-256 del artefacto, `check-gates` detecta aprobaciones vencidas, se registra el canal (`interactive`/`declared`) y cada proyecto puede exigir el interactivo. Corrige además el §5.1 | Reproducido: un proceso sin terminal firma a nombre de otra persona, el artefacto cambia después y `check-gates` responde que todo está aprobado. |
 
-Verificado el 2026-09-24 con ese árbol: `check-bundle`, `check-preset` y `check-steps`
-pasan, y el verificador de skills da 44 comprobaciones y 0 fallos.
-
-**Decisión pendiente del usuario:** commitear esto antes de empezar cualquier cosa nueva.
-Trabajar encima sin commitear mezcla tu cambio con el de otro en el mismo diff.
+Las dos se apoyan en [`REFERENCIAS.md`](REFERENCIAS.md), cuyas entradas se verificaron
+contra la fuente primaria el 2026-09-24.
 
 ---
 
@@ -93,7 +87,7 @@ Y, si tocaste modos, flags o rutas de `core/`:
 python ~/.claude/skills/ief-authoring/scripts/verificar_skills.py
 ```
 
-La suite son **209 tests y tarda unos cuatro minutos**: casi cada uno lanza el motor como
+La suite son **245 tests y tarda unos cuatro minutos**: casi cada uno lanza el motor como
 subproceso sobre un proyecto temporal. No la interrumpas pensando que se colgó. Hay CI en
 GitHub Actions que corre lo mismo.
 
@@ -115,6 +109,8 @@ python core/scripts/verify_frame.py --mode init --project-dir /tmp/prueba \
 Todos reproducidos ejecutando el motor, no leyendo el código. En orden de gravedad.
 
 ### 5.1 `approve-step` y `advance` aceptan `--increment` y no lo leen
+
+> Corrección propuesta en [ADR-001](decisiones/ADR-001-firma-humana-ligada-al-contenido.md), punto 6.
 
 **Lo más grave que hay abierto.** Ambos actúan siempre sobre el incremento **enfocado**.
 El `argparse` acepta el flag, así que no hay error ni aviso.
@@ -250,6 +246,8 @@ al crearlos. Una convención nueva no les llega sola: hay que añadirla en cada 
 
 ## 9. Quién consume el estado fuera del bundle
 
+> [ADR-002](decisiones/ADR-002-compatibilidad-entre-versiones.md) propone cómo avisarles de los cambios y migrarlos sin romperlos.
+
 Un cambio en el motor no se queda en el motor:
 
 - **Los proyectos ya adoptados** tienen un `state.yml` con `schema_version: 4.0` y un
@@ -269,11 +267,18 @@ Un cambio en el motor no se queda en el motor:
 
 ## 10. Orden sugerido si vas a trabajar en esto
 
-1. Commitear o descartar lo del §3, para empezar con el árbol limpio.
-2. Corregir §5.1 (`--increment` en `approve-step` y `advance`) con sus dos tests, y
-   actualizar guía, skill y plantilla.
-3. Corregir §5.2 (`adopt --layout`).
-4. Añadir el test de §5.3, que es lo que evita que la documentación de los comandos vuelva
-   a desincronizarse en silencio.
-5. Consultar al usuario antes de tocar §7: es un cambio de significado del worklog, no
-   solo un flag.
+1. Esperar la decisión sobre ADR-002 y ADR-001 (§3). Si se aceptan, implementar
+   **primero ADR-002** y después ADR-001, cada uno con sus tests, `CHANGELOG.md` y la
+   entrada de `core/cambios.yml`.
+2. Corregir §5.2 (`adopt --layout`). Es un fallo, no cambia el comportamiento
+   documentado: no necesita ADR.
+3. Añadir el test de §5.3, que evita que la documentación de los comandos vuelva a
+   desincronizarse en silencio.
+4. Consultar al usuario antes de tocar §7: es un cambio de significado del worklog, y
+   por lo tanto necesita ADR.
+
+**Camino a 1.0.0.** Decisión de quien mantiene el repositorio (2026-09-24): la 1.0.0 se
+publica **al terminar** la serie de cambios que hoy se evalúa, no antes. Esa serie son
+ADR-002, ADR-001 y los ADR que salgan de las mejoras pendientes. Mientras tanto, el
+bundle sigue en 0.y.z, pero con la política de obsolescencia de ADR-002 ya vigente, para
+que los proyectos que lo usan no se rompan en el camino.
