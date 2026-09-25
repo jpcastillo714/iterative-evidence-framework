@@ -339,7 +339,15 @@ avances       →  09_avances/         |  reports/progress/
 
 ---
 
-## Los tres ciclos
+## Los cuatro ciclos
+
+El rigor se elige **por incremento**, no por proyecto: la pregunta no es qué clase de
+proyecto es, sino qué consecuencias tiene *este* trabajo.
+
+### `task` — código pequeño del que nadie hereda decisiones
+Dos pasos, ninguna compuerta: qué se va a cambiar → qué quedó cambiado. Existe porque un
+framework que exige siete pasos para renombrar una función se deja de usar en tres
+semanas, y entonces no protege de nada.
 
 ### `exploration` — investigar antes de construir
 `objective.md` → análisis → *(contrato opcional)* → `findings.md`. Sin compuertas.

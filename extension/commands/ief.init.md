@@ -21,7 +21,7 @@ python core/scripts/verify_frame.py --mode init     --preset analysis --layout n
 
 | Eje | Opciones | Qué decide |
 |---|---|---|
-| `--preset` | `generic` `research` `product` `analysis` (+ mixin `modeling`) | Vocabulario y ceremonia |
+| `--preset` | `generic` `research` `product` `analysis` `product-modeling` (+ mixin `modeling`) | Vocabulario y ceremonia |
 | `--layout` | `flat` `numbered` | Cómo se llaman las carpetas |
 
 Son **independientes**: un proyecto de análisis puede usar carpetas numeradas y una
@@ -29,7 +29,7 @@ tesis puede usar `src/`. El layout es cuestión de herramientas y gusto, no de t
 trabajo.
 
 El tercer eje —cuánto rigor lleva cada trabajo— **no se decide aquí**: se elige en cada
-incremento con `--type build | exploration | prototype`.
+incremento con `--type task | exploration | prototype | build`.
 
 ## Protocolo
 
@@ -42,8 +42,14 @@ incremento con `--type build | exploration | prototype`.
    | Preset | Para que |
    |---|---|
    | `generic` | Cualquier proyecto de software o iniciativa estandar. |
-   | `engineering` | Pipelines, ETL, ingenieria de datos. |
-   | `academic` | Tesis, papers, experimentos (numeracion `00_admin` … `08_presentaciones`). |
+   | `product` | Sistemas que se despliegan y alguien mantiene: pipelines, ETL, servicios. |
+   | `research` | Tesis, papers, experimentos: el entregable es un documento defendible. |
+   | `analysis` | Preguntas que se responden con datos; el producto es una respuesta con su metrica. |
+   | `product-modeling` | `product` + un modelo entrenado dentro, con model card y compuerta propia. |
+   | `modeling` | Mixin: **no se usa solo**. Aporta el paso 6b a otro preset (`extends: [analysis, modeling]`). |
+
+   La lista real la da `--mode check-preset`, con el ciclo y las compuertas de cada uno.
+   Si esta tabla y esa salida no coinciden, manda la salida.
 
 2. Inicializar. Esto crea los directorios del preset, `initiative/state.yml` y
    `initiative/specs/`:
@@ -61,8 +67,10 @@ incremento con `--type build | exploration | prototype`.
 
 ## Reglas
 
-- **No crear directorios a mano.** Si falta uno, se agrega a
-  `presets/<preset>/directory-convention.yml` y se vuelve a ejecutar `init`.
+- **No crear directorios a mano.** Las rutas las deciden el catalogo de roles
+  (`core/roles.yml`) y el layout (`core/layouts.yml`), no el preset. Si falta un tipo de
+  carpeta, se anade el rol ahi, se incluye en `roles:` del preset y se vuelve a ejecutar
+  `init`.
 - **No editar `state.yml` a mano.** Es la maquina de estados: se toca con
   `verify_frame.py`. Editarlo directamente rompe el historial y las aprobaciones.
 

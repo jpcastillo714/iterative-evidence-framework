@@ -209,10 +209,30 @@ def test_doctor_detecta_el_proyecto_detenido(tmp_path):
 def test_doctor_avisa_de_completed_sin_promover(tmp_path):
     d = _init(tmp_path)
     _nuevo(d, "build", "Uno")
+    (d / "initiative" / "increments" / "001_uno" / "rules.yml").write_text(
+        yaml.safe_dump({"rules": [{"id": "RUL-001-001", "description": "r"}]}),
+        encoding="utf-8")
     correr("--mode", "set-status", "--project-dir", str(d), "--increment", "001_uno",
            "--status", "COMPLETED")
     r = correr("--mode", "doctor", "--project-dir", str(d))
     assert "merge-increment" in r.stdout
+
+
+def test_doctor_no_pide_promover_un_task_sin_nada_que_promover(tmp_path):
+    """Regresion: doctor mandaba a `merge-increment` y el merge respondia que no habia
+    artefactos promovibles. Un `task` no produce reglas: no hay nada que pedir."""
+    d = _init(tmp_path)
+    _nuevo(d, "task", "Migracion")
+    correr("--mode", "set-status", "--project-dir", str(d), "--increment", "001_migracion",
+           "--status", "COMPLETED")
+
+    merge = correr("--mode", "merge-increment", "--project-dir", str(d),
+                   "--increment", "001_migracion", "--dry-run")
+    assert "no tiene artefactos promovibles" in merge.stderr, merge.stdout + merge.stderr
+
+    r = correr("--mode", "doctor", "--project-dir", str(d))
+    assert "merge-increment" not in r.stdout, (
+        "doctor no puede pedir un merge que el propio motor rechaza:\n" + r.stdout)
 
 
 def test_doctor_avisa_de_compuerta_sin_aprobar(tmp_path):

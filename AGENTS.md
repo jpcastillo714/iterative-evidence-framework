@@ -21,12 +21,21 @@ que alguien confundió el molde con la pieza.
 ```bash
 cd /ruta/de/tu/proyecto/real            # <-- OTRO directorio
 python /ruta/al/spec-kit_bundle/core/scripts/verify_frame.py \
-    --mode init --preset data-science --initiative-name "Mi proyecto"
+    --mode init --preset analysis --layout numbered --initiative-name "Mi proyecto"
 ```
 
 El proyecto vive allá. Aquí solo vive el framework que lo gobierna.
 
 ---
+
+## Si vienes a proponer o implementar mejoras
+
+Lee antes [`docs/ESTADO_Y_PENDIENTES.md`](docs/ESTADO_Y_PENDIENTES.md): dice qué está a
+medias, qué fallos hay medidos, qué se discutió sin implementar y qué invariantes no se
+rompen. Está escrito para que no descubras por tu cuenta lo que ya se sabe, y se mantiene
+al día — si resuelves algo de ahí, edita o borra su entrada.
+
+Para entender el framework antes de cambiarlo: [`docs/GUIA_DE_ESTUDIO.md`](docs/GUIA_DE_ESTUDIO.md).
 
 ## Qué sí se hace aquí
 
@@ -62,7 +71,7 @@ tres cosas independientes. Si vas a tocar los presets, ten esto presente:
 |---|---|---|
 | **Layout** | Cómo se llaman las carpetas | `core/layouts.yml`, elegido por proyecto |
 | **Preset** | Vocabulario y ceremonia | `presets/<id>/preset.yml` |
-| **Ciclo** | Cuánto rigor lleva un trabajo | Por incremento (`build`/`exploration`/`prototype`) |
+| **Ciclo** | Cuánto rigor lleva un trabajo | Por incremento (`task`/`exploration`/`prototype`/`build`) |
 
 Señales de que se están volviendo a mezclar:
 

@@ -6,7 +6,7 @@
 |-------|-------|
 | **Paso** | 2 — Inspección Empírica |
 | **Tipo de Incremento** | `build` |
-| **Inputs obligatorios** | `initiative/charter.md`, datos y sistemas reales del proyecto |
+| **Inputs obligatorios** | `initiative/increments/<SLUG>/charter.md`, datos y sistemas reales del proyecto |
 | **Output** | `initiative/increments/<SLUG>/inspection-report.md` |
 | **Human Gate** | ❌ No — Confirmación ligera |
 | **Protocolo si algo no cuadra** | Si la inspección revela que el charter es incorrecto, marcar Paso 1 como NEEDS_REVISION. |
@@ -42,7 +42,7 @@ Al realizar la inspección empírica, tu comportamiento debe regirse por las sig
 Para llevar a cabo una inspección sistemática y exhaustiva, sigue este flujo de trabajo:
 
 1. **Identificar Fuentes de Datos:**
-   * Lee el archivo `initiative/charter.md` creado en el Paso 1.
+   * Lee el archivo `initiative/increments/<SLUG>/charter.md` creado en el Paso 1.
    * Identifica y extrae todas las fuentes de datos mencionadas implícita o explícitamente (ej. bases de datos, APIs de terceros, archivos de configuración, reportes en CSV, logs del sistema).
 
 2. **Acceder y Examinar:**
@@ -63,12 +63,12 @@ Para llevar a cabo una inspección sistemática y exhaustiva, sigue este flujo d
    * Detecta y documenta deuda técnica relevante que pueda afectar la implementación futura.
 
 5. **Revisar Documentación y Especificaciones:**
-   * Lee cualquier archivo en `initiative/sources/` (ej. transcripciones, manuales, PDFs).
+   * Lee las entradas externas registradas (`--mode record-input`) y los documentos de la carpeta del rol `referencias`, si el preset la usa (ej. transcripciones, manuales, PDFs).
    * Extrae requisitos clave, lógica del dominio embebida en textos y terminología específica del dominio.
 
 6. **Triangulación y Actualización del Charter:**
    * Cruza la información obtenida (la realidad empírica) con lo documentado en el *Charter* (las suposiciones iniciales).
-   * Si descubres discrepancias materiales, proponer/ejecutar una actualización en `initiative/charter.md` para reflejar la realidad del sistema.
+   * Si descubres discrepancias materiales, proponer una actualización en `initiative/increments/<SLUG>/charter.md` para reflejar la realidad del sistema. El Paso 1 lleva compuerta: un cambio material en el charter se hace con `--mode rewind --to-step 1 --reason "..."` y vuelve a pasar por la aprobación del usuario.
 
 7. **Consolidar el Reporte:**
    * Redacta todos tus hallazgos en el documento final de inspección.

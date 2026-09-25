@@ -1,0 +1,5 @@
+* **Composicion.** Este preset es `product` + `modeling`; rigen las reglas de ambos fragmentos. Lo que sigue es solo lo que aparece al juntarlos.
+* **El modelo y el servicio se verifican por separado.** El paso 6b aprueba que el modelo generaliza; el paso 7 que el servicio lo sirve bien. Un endpoint que responde en 200 ms con un modelo que no supera la linea base no esta listo, y al reves tampoco.
+* **El preprocesado de inferencia es el mismo que el de evaluacion.** Redimensionado, espacio de color, normalizacion y umbral viven en un unico modulo que importan tanto el benchmark como la API. Dos copias del preprocesado divergen, y la metrica publicada deja de describir lo que se despliega.
+* **El artefacto desplegado es el evaluado.** La model card identifica el archivo exacto de pesos (ruta y hash o version del paquete); el servicio carga ese y no otro.
+* **Los parametros de postproceso son decisiones, no detalles.** El umbral, el canal o la clase que se toma como positiva van en `config` y en una regla con su rationale: cambiarlos cambia el resultado tanto como reentrenar.

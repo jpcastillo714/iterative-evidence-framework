@@ -27,7 +27,7 @@ Este es el **PASO FINAL** de cada incremento dentro del Iterative Evidence Frame
 
 
 
-5. **Integración con Charter Global:** Revisar si los hallazgos de este incremento deben propagarse al charter global (`initiative/charter.md`). Si el incremento build generó conocimiento nuevo sobre los datos, considerar si se necesita actualizar el charter con esa información.
+5. **Integración con la especificación del proyecto:** No hay un charter global: cada incremento tiene el suyo en `initiative/increments/<SLUG>/charter.md`. Lo que este incremento descubrió y debe regir al proyecto sube con `--mode merge-increment`; si afecta a los principios, se propone un cambio en `initiative/specs/constitution.md` al usuario.
 6. **Cierre Oficial:** Actualizar `initiative/increments/index.yml` con el estado COMPLETED.
 
 1. **Verificación Dual Obligatoria:** La validación debe constar de dos partes innegociables:

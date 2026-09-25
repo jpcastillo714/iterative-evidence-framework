@@ -81,6 +81,10 @@ provides:
       version: "0.14.0"
       description: "Mixin componible: anade la Evaluacion del Modelo con compuerta y model card."
       source: "./presets/modeling"
+    - id: "product-modeling"
+      version: "0.14.0"
+      description: "Composicion product + modeling: sistema desplegable con un modelo dentro."
+      source: "./presets/product-modeling"
 
   # El catalogo de roles y los layouts: la estructura de carpetas es un eje aparte
   # del preset, porque no varia por tipo de proyecto sino por gusto y herramientas.

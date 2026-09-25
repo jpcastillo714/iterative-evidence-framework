@@ -35,10 +35,11 @@ exacta va su artefacto. **No inventes subcarpetas ni nombres de archivo.**
 El rigor es una propiedad del trabajo, no del proyecto: un proyecto serio abre un
 incremento `prototype` cuando explora y uno `build` cuando construye en firme.
 
-## Los tres ciclos
+## Los cuatro ciclos
 
 | Ciclo | Pasos | Compuertas | Para |
 |---|---|---|---|
+| `task` | 2 | ninguna | Código pequeño del que nadie hereda decisiones |
 | `exploration` | 4 | ninguna | Investigar antes de construir |
 | `prototype` | 4 | 1 | Descubrir si algo vale la pena |
 | `build` | 7 (8 con `modeling`) | 1·4·5 | Construir algo que tiene que aguantar |

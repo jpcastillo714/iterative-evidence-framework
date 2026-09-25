@@ -1643,6 +1643,20 @@ def _las_reglas_pasaron_por_una_compuerta(preset: Preset, tipo: str) -> bool:
     return any(p.human_gate and p.artefacto == "rules.yml" for p in preset.pasos(tipo))
 
 
+PROMOVIBLES = ("rules.yml", "data-contract.yml", "acceptance-tests.yml")
+
+
+def artefactos_promovibles(project_dir: Path, preset, slug: str) -> List[str]:
+    """Lo que `merge-increment` subiria de este incremento a la especificacion viva.
+
+    Una sola definicion para el merge y para `doctor`. Cuando cada uno decidia por su
+    cuenta, `doctor` pedia promover un `task` terminado y el merge respondia que no
+    habia nada que promover: dos respuestas del mismo motor que se contradecian.
+    """
+    dir_inc = project_dir / preset.dir_incremento(slug)
+    return [n for n in PROMOVIBLES if (dir_inc / n).exists()]
+
+
 def cmd_merge_increment(
     project_dir: Path, slug: Optional[str], dry_run: bool,
     aprobado_por: Optional[str] = None,
@@ -1679,13 +1693,17 @@ def cmd_merge_increment(
         fallar("no se promueve un incremento con compuertas sin aprobar: pasos %s"
                % ", ".join(pendientes))
 
+    promovibles = artefactos_promovibles(project_dir, preset, slug_real)
+    if not promovibles:
+        fallar("el incremento %s no tiene artefactos promovibles" % slug_real)
+
     dir_inc = project_dir / preset.dir_incremento(slug_real)
     dir_specs = project_dir / preset.rutas.get("specs_dir", "initiative/specs")
     dir_specs.mkdir(parents=True, exist_ok=True)
     resumen: List[str] = []
 
     origen = dir_inc / "rules.yml"
-    if origen.exists():
+    if "rules.yml" in promovibles:
         with open(origen, "r", encoding="utf-8") as f:
             propuestas = (yaml.safe_load(f) or {}).get("rules") or []
 
@@ -1779,15 +1797,11 @@ def cmd_merge_increment(
                        % (agregadas, superadas, len(vigentes)))
 
     for nombre in ("data-contract.yml", "acceptance-tests.yml"):
-        src = dir_inc / nombre
-        if not src.exists():
+        if nombre not in promovibles:
             continue
         if not dry_run:
-            shutil.copy2(src, dir_specs / nombre)
+            shutil.copy2(dir_inc / nombre, dir_specs / nombre)
         resumen.append("%s: promovido desde %s" % (nombre, slug_real))
-
-    if not resumen:
-        fallar("el incremento %s no tiene artefactos promovibles" % slug_real)
 
     print("[MERGE] %s -> %s" % (slug_real, dir_specs.relative_to(project_dir)))
     for linea in resumen:
@@ -2258,9 +2272,12 @@ def cmd_doctor(project_dir: Path) -> None:
                       % (len(activos), limite,
                          ", ".join(i.get("slug", "?") for i in activos)))
 
-    # 5. Terminados sin promover.
+    # 5. Terminados sin promover. Solo si hay algo que promover: un `task` no produce
+    #    reglas ni contratos, y pedirle un merge que el propio motor rechaza es mandar
+    #    al usuario a un callejon.
     for inc in incs:
-        if inc.get("status") == "COMPLETED":
+        slug = inc.get("slug", inc.get("id", "?"))
+        if inc.get("status") == "COMPLETED" and artefactos_promovibles(project_dir, preset, slug):
             avisos.append("%s esta COMPLETED pero sus reglas no se han promovido "
                           "(--mode merge-increment)" % inc.get("slug"))
 

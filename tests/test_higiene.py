@@ -14,7 +14,10 @@ import pytest
 
 from conftest import BUNDLE
 
-IGNORAR = {".git", "__pycache__", ".pytest_cache", "node_modules", ".venv"}
+# `.claude/worktrees/` guarda otros checkouts del MISMO repositorio: escanearlos
+# reporta hallazgos que son de otra rama, no de la que se esta probando.
+IGNORAR = {".git", "__pycache__", ".pytest_cache", "node_modules", ".venv",
+           ".claude", "worktrees"}
 
 
 def _archivos(*patrones: str):

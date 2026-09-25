@@ -5,38 +5,124 @@
 * **ID:** {{INITIATIVE_ID}}
 * **Preset:** {{PRESET_NAME}}
 
-## 2. IEF Core Rules (Reglas Centrales)
-Al operar en este proyecto, todos los agentes deben adherirse estrictamente a las siguientes reglas:
+`$IEF` es la carpeta `core/scripts/` del bundle del IEF. Todos los comandos se ejecutan
+desde la raíz de este proyecto.
 
-* **Anti-Basura (Zero Clutter):** Prohibido dejar archivos sueltos en la raíz del proyecto. Todos los archivos, scripts de prueba o artefactos deben ubicarse en su directorio semántico correspondiente.
-* **Piensa Lento (Plan → Execute → Validate):** Nunca te saltes pasos. Primero planifica tu aproximación, luego ejecuta la tarea, y finalmente valida los resultados de forma rigurosa.
-* **Anti-Alucinación:** Bajo ninguna circunstancia inventes datos, variables, reglas o esquemas. Si falta información o es desconocida, márcala explícitamente como `PENDING` y solicita aclaración.
-* **Protocolo de Pasos (Step Protocol):** 
-  1. Lee el archivo `state.yml` para determinar el paso actual.
-  2. Carga *únicamente* las instrucciones del paso actual.
-  3. Ejecuta el trabajo requerido.
-  4. Actualiza `state.yml` al finalizar, reflejando el progreso (ej. de `IN_PROGRESS` a `COMPLETED`).
-* **Reglas de Aprobación (Human Gates):** Los pasos 1 (Charter), 4 (Business Rules), y 5 (Acceptance Tests) en el ciclo build requieren aprobación explícita. "When a human gate step is completed, present the artifact to the user and wait for APPROVAL. Do NOT advance automatically."
-* **Rollback Ligero:** "When implementation reveals a specification error, mark affected steps as NEEDS_REVISION and rewind current_step."
+## 2. La regla que gobierna todo lo demás: pregúntale al motor
 
-## 3. Tipos de Incremento y Estados
-* **Tipos:**
-  - `build`: 7 pasos (1_charter, 2_empirical_inspection, 3_data_contracts, 4_rules, 5_acceptance_tests, 6_implementation, 7_verification).
-  - `exploration`: 3-4 pasos (1_objective, 2_analysis, 2b_data_contract opcional, 3_findings).
-* **Estados de Incremento:** ACTIVE, PAUSED, BLOCKED, COMPLETED, ABANDONED.
-* **Estados de Paso:** PENDING, IN_PROGRESS, COMPLETED, APPROVED, NEEDS_REVISION.
+```bash
+python "$IEF/verify_frame.py" --mode status --json
+```
 
-## 4. Reglas Específicas del Contexto (Preset)
+Esa salida dice el foco, el paso en que está cada incremento, su `key` y si lleva
+compuerta humana. **El ciclo cambia entre proyectos** (los presets renombran pasos,
+mueven compuertas y añaden pasos), así que no supongas nada de eso.
+
+Los artefactos de un incremento viven en su directorio, `initiative/increments/<slug>/`
+(`new-increment` lo imprime al abrirlo), con el nombre que el preset declara para el
+paso. `--mode verify-step` dice qué archivo busca: si falla con «no existe», el
+artefacto está en otro sitio o con otro nombre. No inventes subcarpetas.
+
+## 3. Reglas centrales
+
+* **Anti-alucinación.** No inventes datos, variables, reglas ni esquemas. Lo que falta se
+  marca `PENDING` y se pregunta. Una cifra sin una ejecución detrás no es un resultado.
+* **Sin archivos sueltos.** Todo va a la carpeta de su rol; la ruta la da el motor.
+* **`state.yml` no se edita a mano, nunca.** Es la máquina de estados: `verify_frame.py`
+  escribe de forma atómica y deja historial. Todo cambio tiene su modo:
+
+  | Quiero... | Modo |
+  |---|---|
+  | Dar un paso por terminado (re-verifica el artefacto) | `--mode complete-step` |
+  | Registrar la aprobación de una compuerta | `--mode approve-step --by "<usuario>"` |
+  | Pasar al siguiente paso | `--mode advance` |
+  | Volver atrás porque la especificación estaba mal | `--mode rewind --to-step <ref> --reason "..."` |
+  | Pausar, bloquear, completar o abandonar un incremento | `--mode set-status --increment <slug> --status <X>` |
+  | Cambiar el incremento sobre el que operan los comandos | `--mode focus --increment <slug>` |
+
+  Si crees que necesitas editarlo a mano, falta un modo: repórtalo en vez de abrir el archivo.
+
+## 4. Protocolo de un paso
+
+1. `--mode status --json` para saber el foco y el paso actual.
+2. Leer **solo** las instrucciones de ese paso.
+3. Producir el artefacto en el directorio del incremento (ver §2).
+4. `--mode verify-step` y después `--mode complete-step`.
+5. Si el paso lleva compuerta: presentar el artefacto al usuario y **esperar su
+   aprobación explícita**. Solo entonces `--mode approve-step --by "<usuario>"`.
+6. `--mode advance`.
+
+Si hay varios frentes abiertos, `advance`, `approve-step` y `rewind` caen sobre el
+**enfocado**: compruébalo antes, o pasa `--increment`.
+
+## 5. Compuertas humanas
+
+Las compuertas son del usuario, no tuyas. **Pedirte que hagas algo no es aprobar**:
+«hazlo» o «dale» son encargos de trabajo; una aprobación es posterior al artefacto y se
+refiere a él. Nunca apruebes en nombre del usuario.
+
+Una compuerta detiene el *avance*, no el *trabajo*: redacta lo que se pidió y preséntalo
+listo para que diga «sí» o «cambia esto».
+
+Qué pasos llevan compuerta lo decide el preset: consúltalo en `status --json`
+(`human_gate`), no lo supongas.
+
+## 6. Ciclos
+
+El rigor se elige **por incremento**, no por proyecto. En el ciclo base:
+
+| Ciclo | Cuándo | Pasos | Compuertas |
+|---|---|---|---|
+| `task` | Código pequeño; nadie hereda decisiones nuevas | 2 | ninguna |
+| `exploration` | Entender algo antes de decidir qué construir | 4 (`1`, `2`, `2b`, `3`) | ninguna |
+| `prototype` | Hay una hipótesis que puede fallar | 4 | `1` |
+| `build` | Otros dependerán de esto | 7 | `1`, `4`, `5` |
+
+Los presets modifican esta tabla. Por ejemplo, el mixin `modeling` inserta en `build` el
+paso `6b` (Evaluación del Modelo) **con compuerta**. Por eso la fuente de verdad es
+`status --json`.
+
+Si el trabajo ni siquiera merece un incremento (un gráfico, un arreglo de diez minutos),
+anótalo con `--mode log --message "..."`.
+
+Un `task` **no promueve reglas**: no pasó por compuerta. Si aparece una decisión que
+otros van a heredar, cierra el `task` y abre un `prototype` o un `build`.
+
+## 7. Estados
+
+* **Incremento:** `ACTIVE`, `PAUSED`, `BLOCKED`, `COMPLETED`, `MERGED`, `ABANDONED`.
+* **Paso:** `PENDING`, `IN_PROGRESS`, `COMPLETED`, `APPROVED`, `NEEDS_REVISION`.
+
+## 8. Cuando la especificación está mal
+
+Si la implementación revela que una regla es inviable, no parchees el código para que
+quepa: `--mode rewind --to-step <ref> --reason "..."`. El retroceso marca
+`NEEDS_REVISION` en el paso destino **y en todos los posteriores** que tenían trabajo.
+
+Un criterio que no se puede medir hoy se marca `blocked`; no se rebaja el umbral.
+
+## 9. Cerrar un incremento
+
+```bash
+python "$IEF/verify_frame.py" --mode check-gates
+python "$IEF/verify_frame.py" --mode merge-increment --increment <slug> --dry-run
+python "$IEF/verify_frame.py" --mode merge-increment --increment <slug>
+```
+
+`merge-increment` promueve reglas, contrato y criterios a la especificación viva del
+proyecto. Si el ciclo no tenía compuerta sobre las reglas, exige `--by "<nombre>"`: esa
+firma es de una persona, no tuya.
+
+## 10. Al llegar a este proyecto
+
+```bash
+python "$IEF/verify_frame.py" --mode status
+python "$IEF/verify_frame.py" --mode doctor
+```
+
+`doctor` revela lo que `status` no muestra: estado ilegible, bloqueos vencidos,
+compuertas terminadas sin aprobar, entradas externas que invalidan reglas vigentes.
+Si reporta `FAIL`, arréglalo antes de avanzar ningún paso.
+
+## 11. Reglas específicas del preset
 {{PRESET_FRAGMENT}}
-
-## 5. Gestión del Estado (state.yml)
-El progreso de este proyecto se gestiona mediante el archivo `state.yml` de la iniciativa. 
-* **Lectura:** Siempre verifica la llave del incremento activo, su tipo y el `current_step`.
-* **Actualización:** Cambia los estados de `PENDING` a `IN_PROGRESS` cuando comiences un paso, a `COMPLETED` cuando lo termines. Si requiere aprobación, espera que pase a `APPROVED`.
-* **Historial:** Registra los cambios de estado en la sección `history`.
-
-## 6. Referencia de Comandos IEF
-Puedes usar los siguientes comandos (o prompts) para interactuar con el flujo de trabajo:
-* `/speckit.ief.init`: Inicializar una nueva iniciativa.
-* `/speckit.ief.status`: Mostrar el estado actual del incremento.
-* `/speckit.ief.next`: Avanzar al siguiente paso lógico según el `state.yml`.

@@ -5,9 +5,9 @@
 | Campo | Valor |
 |-------|-------|
 | **Paso** | 1 — Charter |
-| **Tipo de Incremento** | `build` |
-| **Inputs obligatorios** | `initiative/state.yml`, hallazgos de exploraciones previas (si existen) |
-| **Output** | `initiative/charter.md` |
+| **Tipo de Incremento** | `build` y `prototype` (en `prototype` se llama «Hipótesis y Criterio de Éxito») |
+| **Inputs obligatorios** | `--mode status --json`, hallazgos de exploraciones previas (si existen) |
+| **Output** | `initiative/increments/<SLUG>/charter.md` |
 | **Human Gate** | ✅ Sí — REQUIERE aprobación del usuario antes de avanzar al Paso 2 |
 | **Protocolo si algo no cuadra** | Este paso define el alcance. Un charter incorrecto invalida todo lo demás. |
 
@@ -15,11 +15,11 @@
 
 ## Objetivo
 
-El objetivo de este paso es crear el "Charter" (Acta de Constitución) de la iniciativa. Este es el documento fundacional que define de manera inequívoca el **POR QUÉ** estamos realizando este trabajo y el **QUÉ** esperamos lograr. Como agente de IA, tu responsabilidad es establecer una base sólida de información que guíe todas las decisiones posteriores en el desarrollo. El Charter proporciona un marco de referencia centralizado para evitar desviaciones del alcance y asegurar el alineamiento continuo con los objetivos de la iniciativa.
+El objetivo de este paso es crear el "Charter" (Acta de Constitución) del incremento. Este es el documento fundacional que define de manera inequívoca el **POR QUÉ** estamos realizando este trabajo y el **QUÉ** esperamos lograr. Como agente de IA, tu responsabilidad es establecer una base sólida de información que guíe todas las decisiones posteriores en el desarrollo. El Charter proporciona un marco de referencia centralizado para evitar desviaciones del alcance y asegurar el alineamiento continuo con los objetivos de la iniciativa.
 
 ## Contexto
 
-Este es el primer paso metodológico del Iterative Evidence Framework (IEF). Se activa de inmediato cuando el usuario invoca comandos como `/speckit.ief.init` o `/speckit.ief.charter`. Como punto de partida de toda la iniciativa, no existen prerrequisitos formales de pasos anteriores. Sin embargo, tu trabajo en este paso alimentará directamente todos los pasos subsecuentes, especialmente el Paso 2 (Inspección Empírica).
+Es el primer paso de los ciclos `build` y `prototype`. Se activa al abrir un incremento de esos ciclos (`--mode new-increment --type build|prototype`, o `/speckit.ief.charter`). Cada incremento tiene su propio charter; los principios que rigen todo el proyecto no van aquí, sino en `initiative/specs/constitution.md`. Como primer paso del incremento, no tiene prerrequisitos de pasos anteriores. Sin embargo, tu trabajo en este paso alimentará directamente todos los pasos subsecuentes, especialmente el Paso 2 (Inspección Empírica).
 
 ## Reglas Críticas
 
@@ -34,7 +34,7 @@ Al ejecutar este paso, debes adherirte estrictamente a las siguientes reglas inq
 Sigue estas instrucciones secuenciales para construir el Charter utilizando la plantilla estándar del marco. Debes completar las 7 secciones canónicas del documento:
 
 1. **Propósito (Purpose):**
-   * Extrae el objetivo principal a partir de la solicitud inicial del usuario, notas de reuniones (si las hay en `initiative/sources/`) o un brief del proyecto.
+   * Extrae el objetivo principal a partir de la solicitud inicial del usuario, notas de reuniones (las entradas externas registradas con `--mode record-input`, o la carpeta del rol `referencias` si el preset la usa) o un brief del proyecto.
    * Sé específico. Evita descripciones vagas como "Mejorar el sistema". Prefiere: "Migrar el sistema de autenticación de v1 a v2 para soportar SSO, reduciendo la fricción de inicio de sesión".
 
 2. **Contexto (Context):**
@@ -66,13 +66,13 @@ Sigue estas instrucciones secuenciales para construir el Charter utilizando la p
 
 ## Artefacto de Salida
 
-* **Ruta de archivo:** `initiative/charter.md`
-* **Plantilla a utilizar:** Debes utilizar la estructura definida en `core/steps/01_charter/template.md`. Si no puedes acceder a la plantilla, asegúrate de crear el documento en formato Markdown incluyendo las 7 secciones detalladas en el Protocolo.
+* **Ruta de archivo:** `initiative/increments/<SLUG>/charter.md`, donde `<SLUG>` es el del incremento enfocado (`--mode status --json`, campo `focus`). Es la ruta en la que el motor lo busca: `--mode verify-step` falla si el charter está en otro sitio, y sin ese paso verificado el incremento no avanza.
+* **Plantilla a utilizar:** la que el preset declara para este paso (en el preset base, `core/templates/charter-template.md`). Si no puedes acceder a la plantilla, asegúrate de crear el documento en formato Markdown incluyendo las 7 secciones detalladas en el Protocolo.
 
 ## Criterios de Completitud
 
 Antes de dar por finalizado este paso, verifica que se cumplan las siguientes condiciones:
-* [ ] El documento `charter.md` ha sido creado en el directorio correcto o actualizado apropiadamente si ya existía.
+* [ ] El documento `charter.md` existe en `initiative/increments/<SLUG>/` (o se actualizó apropiadamente si ya existía) y `--mode verify-step` lo encuentra.
 * [ ] Las 7 secciones canónicas están presentes en el documento.
 * [ ] No existen datos fabricados, inventados o asumidos.
 * [ ] Cualquier información faltante está explícitamente listada en la sección de Variables Pendientes o marcada como `PENDING` en su respectiva sección.

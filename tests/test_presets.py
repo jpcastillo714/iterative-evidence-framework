@@ -250,7 +250,10 @@ def test_las_claves_de_paso_son_las_mismas_en_todo_el_repo():
     EXENTOS = {"test_doctor_estado.py"}
     huerfanas = []
     for ruta in list(BUNDLE.rglob("*.py")) + list(BUNDLE.rglob("*.yml")) + list(BUNDLE.rglob("*.md")):
-        if any(p in ruta.parts for p in (".git", "__pycache__", "scratch")):
+        # `.claude/worktrees/` es otro checkout del mismo repo: sus archivos son de
+        # otra rama y sus hallazgos no dicen nada de esta.
+        if any(p in ruta.parts for p in (".git", "__pycache__", "scratch",
+                                         ".claude", "worktrees")):
             continue
         if ruta.resolve() == aqui or ruta.name in EXENTOS:
             continue

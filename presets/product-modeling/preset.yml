@@ -1,0 +1,16 @@
+# Preset `product-modeling` — un sistema desplegable con un modelo dentro.
+#
+# Composicion pura de `product` + el mixin `modeling`. No redefine nada: existe para
+# que `--preset` pueda elegirla, porque el motor recibe un solo id. Si algun dia
+# necesita vocabulario propio, se anade aqui con `rename`, no copiando los pasos.
+#
+# Resultado: el ciclo build de `product` (Perfilado de Fuentes, Reglas de Negocio...)
+# con el paso 6b Evaluacion del Modelo insertado antes de Verificacion y Despliegue.
+# "El modelo generaliza" y "el servicio funciona" se aprueban por separado.
+
+id: product-modeling
+name: "Producto con Modelo"
+description: >-
+  Servicios y aplicaciones que se despliegan y cuyo nucleo es un modelo entrenado o
+  preentrenado. El entregable corre en produccion y el modelo tiene model card.
+extends: [product, modeling]
